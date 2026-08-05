@@ -107,14 +107,11 @@
             await cargarTodasLasRecetas();
         }
 
-        // --- PRODUCTOS ---
         async function cargarProductos() {
             const res = await fetch(`${API_URL}/productos`);
             const productos = await res.json();
-            
             const tabla = document.getElementById('tabla-productos');
             const selectReceta = document.getElementById('select-producto-receta');
-            
             tabla.innerHTML = '';
             selectReceta.innerHTML = '<option value="">-- 1. Selecciona un producto --</option>';
 
@@ -146,7 +143,7 @@
         }
 
         async function borrarProducto(id) {
-            if (confirm("¿Borrar este producto del menú? Desaparecerá del menú digital.")) {
+            if (confirm("¿Borrar este producto del menú?")) {
                 await fetch(`${API_URL}/productos/${id}`, { method: 'DELETE' });
                 cargarProductos(); 
                 cargarTodasLasRecetas();
@@ -154,14 +151,11 @@
             }
         }
 
-        // --- INVENTARIO (INSUMOS) ---
         async function cargarInsumos() {
             const res = await fetch(`${API_URL}/insumos`);
             const insumos = await res.json();
-            
             const tabla = document.getElementById('tabla-insumos');
             const selectReceta = document.getElementById('select-insumo-receta');
-            
             tabla.innerHTML = '';
             selectReceta.innerHTML = '<option value="">-- 2. Elige Insumo --</option>';
 
@@ -197,7 +191,7 @@
 
         async function sumarStock(id) {
             const cantidad = document.getElementById(`add-stock-${id}`).value;
-            if(!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida a sumar");
+            if(!cantidad || cantidad <= 0) return alert("Ingresa cantidad válida");
 
             await fetch(`${API_URL}/insumos/${id}/stock`, {
                 method: 'PUT',
@@ -207,15 +201,9 @@
             cargarInsumos();
         }
 
-        // --- RECETAS (VISTA GLOBAL Y CREACIÓN) ---
         function cargarRecetaIndividual() {
             const id_producto = document.getElementById('select-producto-receta').value;
-            const areaReceta = document.getElementById('area-receta');
-            if (!id_producto) {
-                areaReceta.style.display = 'none';
-            } else {
-                areaReceta.style.display = 'block';
-            }
+            document.getElementById('area-receta').style.display = id_producto ? 'block' : 'none';
         }
 
         async function agregarIngrediente() {
@@ -228,15 +216,14 @@
             await fetch(`${API_URL}/recetas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_producto, id_insumo, cantidad_necesaria: cantidad })
+                body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida: cantidad })
             });
 
             document.getElementById('cantidad-insumo-receta').value = '';
-            cargarTodasLasRecetas(); // Refrescamos la tabla global
+            cargarTodasLasRecetas();
             alert("Ingrediente agregado a la receta exitosamente.");
         }
 
-        // Nueva función para cargar absolutamente todas las recetas
         async function cargarTodasLasRecetas() {
             const res = await fetch(`${API_URL}/recetas`);
             const recetas = await res.json();
@@ -253,7 +240,7 @@
                     <tr>
                         <td><span class="badge">Menú</span> <strong>${item.nombre_producto}</strong></td>
                         <td>${item.nombre_insumo}</td>
-                        <td>${item.cantidad_necesaria}</td>
+                        <td>${item.cantidad_requerida}</td>
                         <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
                     </tr>`;
             });
@@ -262,11 +249,10 @@
         async function quitarIngrediente(id_producto, id_insumo) {
             if (confirm("¿Seguro que quieres quitar este ingrediente de la receta?")) {
                 await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}`, { method: 'DELETE' });
-                cargarTodasLasRecetas(); // Refrescamos la tabla global
+                cargarTodasLasRecetas(); 
             }
         }
 
-        // Iniciar todo
         inicializar();
     </script>
 </body>
