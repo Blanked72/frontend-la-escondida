@@ -24,6 +24,8 @@
         
         .form-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; min-width: 150px; }
+        
+        .badge { background: #d35400; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -60,19 +62,19 @@
             </table>
         </div>
 
-        <!-- GESTIÓN DE RECETAS -->
+        <!-- GESTIÓN DE RECETAS (CREAR) -->
         <div class="card full-width">
             <h2>📝 Armar Recetas</h2>
-            <p style="color: #666; font-size: 0.9rem;">Elige un producto y asocia los insumos que gasta al venderse.</p>
+            <p style="color: #666; font-size: 0.9rem;">Elige un producto para agregarle insumos que gastará al venderse.</p>
             
             <div class="form-group">
-                <select id="select-producto-receta" onchange="cargarReceta()">
+                <select id="select-producto-receta" onchange="cargarRecetaIndividual()">
                     <option value="">-- 1. Selecciona un producto --</option>
                 </select>
             </div>
 
             <div id="area-receta" style="display: none; background: #fdfbf7; padding: 15px; border: 1px solid #e0d6c8; border-radius: 8px;">
-                <h3 style="margin-top:0;" id="titulo-receta">Receta del producto</h3>
+                <h3 style="margin-top:0;" id="titulo-receta">Agregar ingredientes a este producto:</h3>
                 
                 <div class="form-group">
                     <select id="select-insumo-receta">
@@ -81,12 +83,17 @@
                     <input type="number" id="cantidad-insumo-receta" placeholder="Cantidad que usa (ej. 1, 0.5)" step="0.01">
                     <button class="btn-success" onclick="agregarIngrediente()">+ Agregar a Receta</button>
                 </div>
-
-                <table>
-                    <thead><tr><th>Insumo</th><th>Cantidad que gasta</th><th>Acción</th></tr></thead>
-                    <tbody id="tabla-receta"></tbody>
-                </table>
             </div>
+        </div>
+
+        <!-- VISTA GLOBAL DE RECETAS -->
+        <div class="card full-width">
+            <h2>📜 Todas las Recetas (Vista Global)</h2>
+            <p style="color: #666; font-size: 0.9rem;">Aquí puedes ver y eliminar los ingredientes de todos tus productos.</p>
+            <table>
+                <thead><tr><th>Producto del Menú</th><th>Insumo que gasta</th><th>Cantidad</th><th>Acción</th></tr></thead>
+                <tbody id="tabla-todas-recetas"></tbody>
+            </table>
         </div>
 
     </div>
@@ -97,6 +104,7 @@
         async function inicializar() {
             await cargarProductos();
             await cargarInsumos();
+            await cargarTodasLasRecetas();
         }
 
         // --- PRODUCTOS ---
@@ -140,8 +148,8 @@
         async function borrarProducto(id) {
             if (confirm("¿Borrar este producto del menú? Desaparecerá del menú digital.")) {
                 await fetch(`${API_URL}/productos/${id}`, { method: 'DELETE' });
-                cargarProductos(); // Recarga la tabla
-                // Si teníamos ese producto seleccionado en la receta, ocultamos el panel
+                cargarProductos(); 
+                cargarTodasLasRecetas();
                 document.getElementById('area-receta').style.display = 'none';
             }
         }
@@ -199,36 +207,15 @@
             cargarInsumos();
         }
 
-        // --- RECETAS ---
-        async function cargarReceta() {
+        // --- RECETAS (VISTA GLOBAL Y CREACIÓN) ---
+        function cargarRecetaIndividual() {
             const id_producto = document.getElementById('select-producto-receta').value;
             const areaReceta = document.getElementById('area-receta');
-            
             if (!id_producto) {
                 areaReceta.style.display = 'none';
-                return;
+            } else {
+                areaReceta.style.display = 'block';
             }
-
-            areaReceta.style.display = 'block';
-            
-            const res = await fetch(`${API_URL}/recetas/${id_producto}`);
-            const receta = await res.json();
-            const tabla = document.getElementById('tabla-receta');
-            tabla.innerHTML = '';
-
-            if (receta.length === 0) {
-                tabla.innerHTML = '<tr><td colspan="3">Sin ingredientes. Este producto no descontará nada del inventario.</td></tr>';
-                return;
-            }
-
-            receta.forEach(item => {
-                tabla.innerHTML += `
-                    <tr>
-                        <td>${item.nombre_insumo}</td>
-                        <td>${item.cantidad_necesaria}</td>
-                        <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
-                    </tr>`;
-            });
         }
 
         async function agregarIngrediente() {
@@ -245,13 +232,37 @@
             });
 
             document.getElementById('cantidad-insumo-receta').value = '';
-            cargarReceta();
+            cargarTodasLasRecetas(); // Refrescamos la tabla global
+            alert("Ingrediente agregado a la receta exitosamente.");
+        }
+
+        // Nueva función para cargar absolutamente todas las recetas
+        async function cargarTodasLasRecetas() {
+            const res = await fetch(`${API_URL}/recetas`);
+            const recetas = await res.json();
+            const tabla = document.getElementById('tabla-todas-recetas');
+            tabla.innerHTML = '';
+
+            if (recetas.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="4">No hay recetas configuradas todavía.</td></tr>';
+                return;
+            }
+
+            recetas.forEach(item => {
+                tabla.innerHTML += `
+                    <tr>
+                        <td><span class="badge">Menú</span> <strong>${item.nombre_producto}</strong></td>
+                        <td>${item.nombre_insumo}</td>
+                        <td>${item.cantidad_necesaria}</td>
+                        <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
+                    </tr>`;
+            });
         }
 
         async function quitarIngrediente(id_producto, id_insumo) {
-            if (confirm("¿Quitar este ingrediente de la receta?")) {
+            if (confirm("¿Seguro que quieres quitar este ingrediente de la receta?")) {
                 await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}`, { method: 'DELETE' });
-                cargarReceta();
+                cargarTodasLasRecetas(); // Refrescamos la tabla global
             }
         }
 
