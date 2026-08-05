@@ -34,11 +34,10 @@
 
     <div class="grid-layout">
         
-        <!-- GESTIÓN DE PRODUCTOS -->
         <div class="card">
             <h2>🍔 Productos (Menú)</h2>
             <div class="form-group">
-                <input type="text" id="nuevo-prod-nombre" placeholder="Nombre (ej. Hamburguesa Res)">
+                <input type="text" id="nuevo-prod-nombre" placeholder="Nombre (ej. Hamburguesa)">
                 <input type="number" id="nuevo-prod-precio" placeholder="Precio ($)">
                 <button class="btn-success" onclick="agregarProducto()">+ Agregar</button>
             </div>
@@ -48,7 +47,6 @@
             </table>
         </div>
 
-        <!-- GESTIÓN DE INVENTARIO -->
         <div class="card">
             <h2>📦 Inventario (Insumos)</h2>
             <div class="form-group">
@@ -62,7 +60,6 @@
             </table>
         </div>
 
-        <!-- GESTIÓN DE RECETAS (CREAR) -->
         <div class="card full-width">
             <h2>📝 Armar Recetas</h2>
             <p style="color: #666; font-size: 0.9rem;">Elige un producto para agregarle insumos que gastará al venderse.</p>
@@ -86,7 +83,6 @@
             </div>
         </div>
 
-        <!-- VISTA GLOBAL DE RECETAS -->
         <div class="card full-width">
             <h2>📜 Todas las Recetas (Vista Global)</h2>
             <p style="color: #666; font-size: 0.9rem;">Aquí puedes ver y eliminar los ingredientes de todos tus productos.</p>
@@ -213,7 +209,6 @@
 
             if (!id_producto || !id_insumo || !cantidad) return alert("Selecciona insumo y cantidad");
 
-            // CORREGIDO: Vuelve a usar cantidad_necesaria
             await fetch(`${API_URL}/recetas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -237,7 +232,6 @@
             }
 
             recetas.forEach(item => {
-                // CORREGIDO: Vuelve a usar cantidad_necesaria
                 tabla.innerHTML += `
                     <tr>
                         <td><span class="badge">Menú</span> <strong>${item.nombre_producto}</strong></td>
