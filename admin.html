@@ -213,10 +213,11 @@
 
             if (!id_producto || !id_insumo || !cantidad) return alert("Selecciona insumo y cantidad");
 
+            // CORREGIDO: Vuelve a usar cantidad_necesaria
             await fetch(`${API_URL}/recetas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida: cantidad })
+                body: JSON.stringify({ id_producto, id_insumo, cantidad_necesaria: cantidad })
             });
 
             document.getElementById('cantidad-insumo-receta').value = '';
@@ -236,11 +237,12 @@
             }
 
             recetas.forEach(item => {
+                // CORREGIDO: Vuelve a usar cantidad_necesaria
                 tabla.innerHTML += `
                     <tr>
                         <td><span class="badge">Menú</span> <strong>${item.nombre_producto}</strong></td>
                         <td>${item.nombre_insumo}</td>
-                        <td>${item.cantidad_requerida}</td>
+                        <td>${item.cantidad_necesaria}</td>
                         <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
                     </tr>`;
             });
