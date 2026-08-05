@@ -3,142 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración</title>
+    <title>Panel de Administración - Menú e Inventario</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 2rem; }
-        .container { max-width: 1000px; margin: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 5px solid #3498db; }
-        h2 { color: #2c3e50; margin-top: 0; font-size: 1.2rem; }
-        label { font-weight: bold; display: block; margin-top: 10px; font-size: 0.9rem; }
-        input, select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { margin-top: 15px; width: 100%; background: #27ae60; color: white; border: none; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        button:hover { background: #2ecc71; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #4a2c2a; font-size: 2.5rem; margin-bottom: 30px; }
+        h2 { color: #d35400; border-bottom: 2px solid #f1c40f; padding-bottom: 5px; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .full-width { grid-column: 1 / -1; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #4a2c2a; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        button { border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-primary { background: #3498db; color: white; }
+        
+        .form-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; min-width: 150px; }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center; color: #2c3e50;">⚙️ Panel de Control - La Escondida</h1>
-    
-    <div class="container">
+
+    <h1>⚙️ Administración - La Escondida</h1>
+
+    <div class="grid-layout">
         
-        <!-- 1. Formulario de Productos -->
+        <!-- GESTIÓN DE PRODUCTOS -->
         <div class="card">
-            <h2>🍔 Crear Nuevo Producto</h2>
-            <label>Nombre del platillo/bebida:</label>
-            <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Sencilla">
-            <label>Precio de venta ($):</label>
-            <input type="number" id="prod-precio" placeholder="Ej: 95.00">
-            <button onclick="agregarProducto()">Guardar Producto</button>
+            <h2>🍔 Productos (Menú)</h2>
+            <div class="form-group">
+                <input type="text" id="nuevo-prod-nombre" placeholder="Nombre (ej. Hamburguesa Res)">
+                <input type="number" id="nuevo-prod-precio" placeholder="Precio ($)">
+                <button class="btn-success" onclick="agregarProducto()">+ Agregar</button>
+            </div>
+            <table>
+                <thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Acción</th></tr></thead>
+                <tbody id="tabla-productos"></tbody>
+            </table>
         </div>
 
-        <!-- 2. Formulario de Insumos Nuevos -->
+        <!-- GESTIÓN DE INVENTARIO -->
         <div class="card">
-            <h2>📦 Crear Insumo (Desde Cero)</h2>
-            <label>Nombre y unidad:</label>
-            <input type="text" id="ins-nombre" placeholder="Ej: Tomate (Kg)">
-            <label>Cantidad inicial:</label>
-            <input type="number" id="ins-cantidad" placeholder="Ej: 5.5">
-            <button onclick="agregarInsumo()">Guardar Nuevo Insumo</button>
+            <h2>📦 Inventario (Insumos)</h2>
+            <div class="form-group">
+                <input type="text" id="nuevo-insumo-nombre" placeholder="Nombre (ej. Pan Chico)">
+                <input type="number" id="nuevo-insumo-stock" placeholder="Stock Inicial">
+                <button class="btn-success" onclick="agregarInsumo()">+ Crear Insumo</button>
+            </div>
+            <table>
+                <thead><tr><th>ID</th><th>Insumo</th><th>Stock Actual</th><th>+ Stock</th></tr></thead>
+                <tbody id="tabla-insumos"></tbody>
+            </table>
         </div>
 
-        <!-- 3. Formulario para Reabastecer Stock -->
-        <div class="card" style="border-top: 5px solid #e67e22;">
-            <h2>➕ Reabastecer Stock</h2>
-            <label>Selecciona el insumo:</label>
-            <select id="select-insumo">
-                <option value="">Cargando inventario...</option>
-            </select>
-            <label>Cantidad que compraste (se sumará):</label>
-            <input type="number" id="ins-sumar" placeholder="Ej: 10">
-            <button onclick="sumarStock()">Sumar al Inventario</button>
+        <!-- GESTIÓN DE RECETAS -->
+        <div class="card full-width">
+            <h2>📝 Armar Recetas</h2>
+            <p style="color: #666; font-size: 0.9rem;">Elige un producto y asocia los insumos que gasta al venderse.</p>
+            
+            <div class="form-group">
+                <select id="select-producto-receta" onchange="cargarReceta()">
+                    <option value="">-- 1. Selecciona un producto --</option>
+                </select>
+            </div>
+
+            <div id="area-receta" style="display: none; background: #fdfbf7; padding: 15px; border: 1px solid #e0d6c8; border-radius: 8px;">
+                <h3 style="margin-top:0;" id="titulo-receta">Receta del producto</h3>
+                
+                <div class="form-group">
+                    <select id="select-insumo-receta">
+                        <option value="">-- 2. Elige Insumo --</option>
+                    </select>
+                    <input type="number" id="cantidad-insumo-receta" placeholder="Cantidad que usa (ej. 1, 0.5)" step="0.01">
+                    <button class="btn-success" onclick="agregarIngrediente()">+ Agregar a Receta</button>
+                </div>
+
+                <table>
+                    <thead><tr><th>Insumo</th><th>Cantidad que gasta</th><th>Acción</th></tr></thead>
+                    <tbody id="tabla-receta"></tbody>
+                </table>
+            </div>
         </div>
 
     </div>
 
     <script>
-        // Función para cargar la lista desplegable al entrar a la página
-        async function cargarListaInsumos() {
-            try {
-                const res = await fetch('https://backend-la-escondida.onrender.com/api/insumos');
-                const insumos = await res.json();
-                const select = document.getElementById('select-insumo');
-                
-                select.innerHTML = '<option value="">-- Selecciona un insumo --</option>';
-                
-                insumos.forEach(insumo => {
-                    select.innerHTML += `<option value="${insumo.id_insumo}">${insumo.nombre} (Hay: ${insumo.cantidad_actual})</option>`;
-                });
-            } catch (error) {
-                document.getElementById('select-insumo').innerHTML = '<option value="">Error al cargar insumos</option>';
+        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+
+        async function inicializar() {
+            await cargarProductos();
+            await cargarInsumos();
+        }
+
+        // --- PRODUCTOS ---
+        async function cargarProductos() {
+            const res = await fetch(`${API_URL}/productos`);
+            const productos = await res.json();
+            
+            const tabla = document.getElementById('tabla-productos');
+            const selectReceta = document.getElementById('select-producto-receta');
+            
+            tabla.innerHTML = '';
+            selectReceta.innerHTML = '<option value="">-- 1. Selecciona un producto --</option>';
+
+            productos.forEach(p => {
+                tabla.innerHTML += `
+                    <tr>
+                        <td>${p.id_producto}</td>
+                        <td>${p.nombre}</td>
+                        <td>$${p.precio}</td>
+                        <td><button class="btn-danger" onclick="borrarProducto(${p.id_producto})">Borrar</button></td>
+                    </tr>`;
+                selectReceta.innerHTML += `<option value="${p.id_producto}">${p.nombre}</option>`;
+            });
+        }
+
+        async function agregarProducto() {
+            const nombre = document.getElementById('nuevo-prod-nombre').value;
+            const precio = document.getElementById('nuevo-prod-precio').value;
+            if(!nombre || !precio) return alert("Llena nombre y precio");
+
+            await fetch(`${API_URL}/productos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, precio })
+            });
+            document.getElementById('nuevo-prod-nombre').value = '';
+            document.getElementById('nuevo-prod-precio').value = '';
+            cargarProductos();
+        }
+
+        async function borrarProducto(id) {
+            if (confirm("¿Borrar este producto del menú? Desaparecerá del menú digital.")) {
+                await fetch(`${API_URL}/productos/${id}`, { method: 'DELETE' });
+                cargarProductos(); // Recarga la tabla
+                // Si teníamos ese producto seleccionado en la receta, ocultamos el panel
+                document.getElementById('area-receta').style.display = 'none';
             }
         }
 
-        // Llamamos a la función automáticamente
-        cargarListaInsumos();
-
-        // 1. Agregar Producto
-        async function agregarProducto() {
-            const nombre = document.getElementById('prod-nombre').value;
-            const precio = document.getElementById('prod-precio').value;
-            if(!nombre || !precio) return alert("Llena todos los campos");
-
-            try {
-                const res = await fetch('https://backend-la-escondida.onrender.com/api/productos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, precio })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("✅ ¡Producto agregado al menú!");
-                    document.getElementById('prod-nombre').value = '';
-                    document.getElementById('prod-precio').value = '';
-                } else alert("❌ Error: " + data.error);
-            } catch (error) { alert("❌ Error de conexión"); }
-        }
-
-        // 2. Agregar Insumo desde Cero
-        async function agregarInsumo() {
-            const nombre = document.getElementById('ins-nombre').value;
-            const cantidad_actual = document.getElementById('ins-cantidad').value;
-            if(!nombre || !cantidad_actual) return alert("Llena todos los campos");
-
-            try {
-                const res = await fetch('https://backend-la-escondida.onrender.com/api/insumos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, cantidad_actual })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("✅ ¡Insumo creado!");
-                    document.getElementById('ins-nombre').value = '';
-                    document.getElementById('ins-cantidad').value = '';
-                    cargarListaInsumos(); // Recarga la lista desplegable
-                } else alert("❌ Error: " + data.error);
-            } catch (error) { alert("❌ Error de conexión"); }
-        }
-
-        // 3. Reabastecer (Sumar) Stock
-        async function sumarStock() {
-            const id = document.getElementById('select-insumo').value;
-            const cantidad_agregar = document.getElementById('ins-sumar').value;
+        // --- INVENTARIO (INSUMOS) ---
+        async function cargarInsumos() {
+            const res = await fetch(`${API_URL}/insumos`);
+            const insumos = await res.json();
             
-            if(!id || !cantidad_agregar) return alert("Selecciona un insumo e ingresa la cantidad");
+            const tabla = document.getElementById('tabla-insumos');
+            const selectReceta = document.getElementById('select-insumo-receta');
+            
+            tabla.innerHTML = '';
+            selectReceta.innerHTML = '<option value="">-- 2. Elige Insumo --</option>';
 
-            try {
-                const res = await fetch(`https://backend-la-escondida.onrender.com/api/insumos/${id}/stock`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cantidad_agregar })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("✅ ¡Stock sumado exitosamente!");
-                    document.getElementById('ins-sumar').value = '';
-                    cargarListaInsumos(); // Recarga la lista para mostrar los números actualizados
-                } else alert("❌ Error: " + data.error);
-            } catch (error) { alert("❌ Error de conexión"); }
+            insumos.forEach(i => {
+                tabla.innerHTML += `
+                    <tr>
+                        <td>${i.id_insumo}</td>
+                        <td>${i.nombre}</td>
+                        <td><strong>${i.cantidad_actual}</strong></td>
+                        <td style="display:flex; gap:5px;">
+                            <input type="number" id="add-stock-${i.id_insumo}" placeholder="Cant." style="width:60px; min-width:60px;">
+                            <button class="btn-primary" onclick="sumarStock(${i.id_insumo})">Sumar</button>
+                        </td>
+                    </tr>`;
+                selectReceta.innerHTML += `<option value="${i.id_insumo}">${i.nombre}</option>`;
+            });
         }
+
+        async function agregarInsumo() {
+            const nombre = document.getElementById('nuevo-insumo-nombre').value;
+            const cantidad = document.getElementById('nuevo-insumo-stock').value;
+            if(!nombre || !cantidad) return alert("Llena nombre y stock inicial");
+
+            await fetch(`${API_URL}/insumos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, cantidad_actual: cantidad })
+            });
+            document.getElementById('nuevo-insumo-nombre').value = '';
+            document.getElementById('nuevo-insumo-stock').value = '';
+            cargarInsumos();
+        }
+
+        async function sumarStock(id) {
+            const cantidad = document.getElementById(`add-stock-${id}`).value;
+            if(!cantidad || cantidad <= 0) return alert("Ingresa una cantidad válida a sumar");
+
+            await fetch(`${API_URL}/insumos/${id}/stock`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cantidad_agregar: cantidad })
+            });
+            cargarInsumos();
+        }
+
+        // --- RECETAS ---
+        async function cargarReceta() {
+            const id_producto = document.getElementById('select-producto-receta').value;
+            const areaReceta = document.getElementById('area-receta');
+            
+            if (!id_producto) {
+                areaReceta.style.display = 'none';
+                return;
+            }
+
+            areaReceta.style.display = 'block';
+            
+            const res = await fetch(`${API_URL}/recetas/${id_producto}`);
+            const receta = await res.json();
+            const tabla = document.getElementById('tabla-receta');
+            tabla.innerHTML = '';
+
+            if (receta.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="3">Sin ingredientes. Este producto no descontará nada del inventario.</td></tr>';
+                return;
+            }
+
+            receta.forEach(item => {
+                tabla.innerHTML += `
+                    <tr>
+                        <td>${item.nombre_insumo}</td>
+                        <td>${item.cantidad_necesaria}</td>
+                        <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
+                    </tr>`;
+            });
+        }
+
+        async function agregarIngrediente() {
+            const id_producto = document.getElementById('select-producto-receta').value;
+            const id_insumo = document.getElementById('select-insumo-receta').value;
+            const cantidad = document.getElementById('cantidad-insumo-receta').value;
+
+            if (!id_producto || !id_insumo || !cantidad) return alert("Selecciona insumo y cantidad");
+
+            await fetch(`${API_URL}/recetas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_producto, id_insumo, cantidad_necesaria: cantidad })
+            });
+
+            document.getElementById('cantidad-insumo-receta').value = '';
+            cargarReceta();
+        }
+
+        async function quitarIngrediente(id_producto, id_insumo) {
+            if (confirm("¿Quitar este ingrediente de la receta?")) {
+                await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}`, { method: 'DELETE' });
+                cargarReceta();
+            }
+        }
+
+        // Iniciar todo
+        inicializar();
     </script>
 </body>
 </html>
