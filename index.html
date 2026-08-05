@@ -121,7 +121,8 @@
 
                 const resultado = await respuesta.json();
 
-                if (resultado.success) {
+                // Lógica de confirmación corregida
+                if (resultado.id_orden) {
                     alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
                     
                     carrito = [];
