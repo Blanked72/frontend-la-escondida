@@ -11,7 +11,6 @@
         .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 5px solid #3498db; text-align: center; }
         .card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3rem; }
         .cantidad { font-size: 2.5rem; font-weight: bold; color: #e67e22; margin: 10px 0; }
-        .unidad { font-size: 1rem; color: #7f8c8d; font-weight: bold; }
         .btn-actualizar { display: block; margin: 3rem auto 0; background-color: #34495e; color: white; border: none; padding: 12px 25px; font-size: 1.1rem; border-radius: 5px; cursor: pointer; }
         .btn-actualizar:hover { background-color: #2c3e50; }
     </style>
@@ -29,7 +28,6 @@
     <script>
         async function cargarInventario() {
             try {
-                // Llamamos a la ruta que ya tenías lista en tu servidor
                 const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/insumos');
                 const insumos = await respuesta.json();
                 
@@ -45,15 +43,13 @@
                     const card = document.createElement('div');
                     card.className = 'card';
                     
-                    // Adaptamos los nombres por si tus columnas se llaman diferente
-                    const nombre = insumo.nombre || 'Insumo';
-                    const cantidad = insumo.cantidad || insumo.stock || 0;
-                    const unidad = insumo.unidad || insumo.medida || 'unidades';
+                    // Aquí está la corrección: leemos "cantidad_actual" según tu base de datos
+                    const nombre = insumo.nombre || 'Insumo Desconocido';
+                    const cantidad = insumo.cantidad_actual || 0;
 
                     card.innerHTML = `
                         <h3>${nombre}</h3>
                         <div class="cantidad">${cantidad}</div>
-                        <div class="unidad">${unidad}</div>
                     `;
                     grid.appendChild(card);
                 });
