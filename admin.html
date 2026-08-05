@@ -6,22 +6,23 @@
     <title>Panel de Administración</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 2rem; }
-        .container { max-width: 800px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; margin-top: 0; }
-        label { font-weight: bold; display: block; margin-top: 10px; }
-        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        .container { max-width: 1000px; margin: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 5px solid #3498db; }
+        h2 { color: #2c3e50; margin-top: 0; font-size: 1.2rem; }
+        label { font-weight: bold; display: block; margin-top: 10px; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
         button { margin-top: 15px; width: 100%; background: #27ae60; color: white; border: none; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 5px; }
         button:hover { background: #2ecc71; }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">⚙️ Panel de Control - La Escondida</h1>
+    <h1 style="text-align: center; color: #2c3e50;">⚙️ Panel de Control - La Escondida</h1>
+    
     <div class="container">
         
-        <!-- Formulario de Productos -->
+        <!-- 1. Formulario de Productos -->
         <div class="card">
-            <h2>🍔 Nuevo Producto (Menú)</h2>
+            <h2>🍔 Crear Nuevo Producto</h2>
             <label>Nombre del platillo/bebida:</label>
             <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Sencilla">
             <label>Precio de venta ($):</label>
@@ -29,47 +30,114 @@
             <button onclick="agregarProducto()">Guardar Producto</button>
         </div>
 
-        <!-- Formulario de Insumos -->
+        <!-- 2. Formulario de Insumos Nuevos -->
         <div class="card">
-            <h2>📦 Nuevo Insumo (Inventario)</h2>
+            <h2>📦 Crear Insumo (Desde Cero)</h2>
             <label>Nombre y unidad:</label>
             <input type="text" id="ins-nombre" placeholder="Ej: Tomate (Kg)">
             <label>Cantidad inicial:</label>
             <input type="number" id="ins-cantidad" placeholder="Ej: 5.5">
-            <button onclick="agregarInsumo()">Guardar Insumo</button>
+            <button onclick="agregarInsumo()">Guardar Nuevo Insumo</button>
+        </div>
+
+        <!-- 3. Formulario para Reabastecer Stock -->
+        <div class="card" style="border-top: 5px solid #e67e22;">
+            <h2>➕ Reabastecer Stock</h2>
+            <label>Selecciona el insumo:</label>
+            <select id="select-insumo">
+                <option value="">Cargando inventario...</option>
+            </select>
+            <label>Cantidad que compraste (se sumará):</label>
+            <input type="number" id="ins-sumar" placeholder="Ej: 10">
+            <button onclick="sumarStock()">Sumar al Inventario</button>
         </div>
 
     </div>
 
     <script>
+        // Función para cargar la lista desplegable al entrar a la página
+        async function cargarListaInsumos() {
+            try {
+                const res = await fetch('https://backend-la-escondida.onrender.com/api/insumos');
+                const insumos = await res.json();
+                const select = document.getElementById('select-insumo');
+                
+                select.innerHTML = '<option value="">-- Selecciona un insumo --</option>';
+                
+                insumos.forEach(insumo => {
+                    select.innerHTML += `<option value="${insumo.id_insumo}">${insumo.nombre} (Hay: ${insumo.cantidad_actual})</option>`;
+                });
+            } catch (error) {
+                document.getElementById('select-insumo').innerHTML = '<option value="">Error al cargar insumos</option>';
+            }
+        }
+
+        // Llamamos a la función automáticamente
+        cargarListaInsumos();
+
+        // 1. Agregar Producto
         async function agregarProducto() {
             const nombre = document.getElementById('prod-nombre').value;
             const precio = document.getElementById('prod-precio').value;
             if(!nombre || !precio) return alert("Llena todos los campos");
 
-            await fetch('https://backend-la-escondida.onrender.com/api/productos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, precio })
-            });
-            alert("¡Producto agregado al menú!");
-            document.getElementById('prod-nombre').value = '';
-            document.getElementById('prod-precio').value = '';
+            try {
+                const res = await fetch('https://backend-la-escondida.onrender.com/api/productos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, precio })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ ¡Producto agregado al menú!");
+                    document.getElementById('prod-nombre').value = '';
+                    document.getElementById('prod-precio').value = '';
+                } else alert("❌ Error: " + data.error);
+            } catch (error) { alert("❌ Error de conexión"); }
         }
 
+        // 2. Agregar Insumo desde Cero
         async function agregarInsumo() {
             const nombre = document.getElementById('ins-nombre').value;
             const cantidad_actual = document.getElementById('ins-cantidad').value;
             if(!nombre || !cantidad_actual) return alert("Llena todos los campos");
 
-            await fetch('https://backend-la-escondida.onrender.com/api/insumos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre, cantidad_actual })
-            });
-            alert("¡Insumo agregado al inventario!");
-            document.getElementById('ins-nombre').value = '';
-            document.getElementById('ins-cantidad').value = '';
+            try {
+                const res = await fetch('https://backend-la-escondida.onrender.com/api/insumos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, cantidad_actual })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ ¡Insumo creado!");
+                    document.getElementById('ins-nombre').value = '';
+                    document.getElementById('ins-cantidad').value = '';
+                    cargarListaInsumos(); // Recarga la lista desplegable
+                } else alert("❌ Error: " + data.error);
+            } catch (error) { alert("❌ Error de conexión"); }
+        }
+
+        // 3. Reabastecer (Sumar) Stock
+        async function sumarStock() {
+            const id = document.getElementById('select-insumo').value;
+            const cantidad_agregar = document.getElementById('ins-sumar').value;
+            
+            if(!id || !cantidad_agregar) return alert("Selecciona un insumo e ingresa la cantidad");
+
+            try {
+                const res = await fetch(`https://backend-la-escondida.onrender.com/api/insumos/${id}/stock`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cantidad_agregar })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ ¡Stock sumado exitosamente!");
+                    document.getElementById('ins-sumar').value = '';
+                    cargarListaInsumos(); // Recarga la lista para mostrar los números actualizados
+                } else alert("❌ Error: " + data.error);
+            } catch (error) { alert("❌ Error de conexión"); }
         }
     </script>
 </body>
