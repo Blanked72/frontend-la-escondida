@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 2rem; }
+        .container { max-width: 800px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; margin-top: 0; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        button { margin-top: 15px; width: 100%; background: #27ae60; color: white; border: none; padding: 10px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        button:hover { background: #2ecc71; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">⚙️ Panel de Control - La Escondida</h1>
+    <div class="container">
+        
+        <!-- Formulario de Productos -->
+        <div class="card">
+            <h2>🍔 Nuevo Producto (Menú)</h2>
+            <label>Nombre del platillo/bebida:</label>
+            <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Sencilla">
+            <label>Precio de venta ($):</label>
+            <input type="number" id="prod-precio" placeholder="Ej: 95.00">
+            <button onclick="agregarProducto()">Guardar Producto</button>
+        </div>
+
+        <!-- Formulario de Insumos -->
+        <div class="card">
+            <h2>📦 Nuevo Insumo (Inventario)</h2>
+            <label>Nombre y unidad:</label>
+            <input type="text" id="ins-nombre" placeholder="Ej: Tomate (Kg)">
+            <label>Cantidad inicial:</label>
+            <input type="number" id="ins-cantidad" placeholder="Ej: 5.5">
+            <button onclick="agregarInsumo()">Guardar Insumo</button>
+        </div>
+
+    </div>
+
+    <script>
+        async function agregarProducto() {
+            const nombre = document.getElementById('prod-nombre').value;
+            const precio = document.getElementById('prod-precio').value;
+            if(!nombre || !precio) return alert("Llena todos los campos");
+
+            await fetch('https://backend-la-escondida.onrender.com/api/productos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, precio })
+            });
+            alert("¡Producto agregado al menú!");
+            document.getElementById('prod-nombre').value = '';
+            document.getElementById('prod-precio').value = '';
+        }
+
+        async function agregarInsumo() {
+            const nombre = document.getElementById('ins-nombre').value;
+            const cantidad_actual = document.getElementById('ins-cantidad').value;
+            if(!nombre || !cantidad_actual) return alert("Llena todos los campos");
+
+            await fetch('https://backend-la-escondida.onrender.com/api/insumos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, cantidad_actual })
+            });
+            alert("¡Insumo agregado al inventario!");
+            document.getElementById('ins-nombre').value = '';
+            document.getElementById('ins-cantidad').value = '';
+        }
+    </script>
+</body>
+</html>
