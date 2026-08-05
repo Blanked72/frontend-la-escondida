@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Escondida - Menú</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; padding-bottom: 100px; }
+        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; }
+        header p { margin: 0; font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
+        .container { padding: 1rem; max-width: 600px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+        .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
+        .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
+        .btn-add { background-color: #27ae60; color: white; border: none; padding: 0.6rem; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
+        .cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+        .btn-order { background-color: #d35400; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 5px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+        .pantalla-bloqueo { text-align: center; padding: 50px 20px; margin-top: 20px; }
+        .pantalla-bloqueo h1 { font-size: 4rem; margin: 0; }
+        .pantalla-bloqueo h2 { color: #c0392b; }
+        .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>☕ La Escondida</h1>
+        <p id="info-mesa">Buscando mesa...</p>
+    </header>
+
+    <div class="container">
+        <h2>Nuestro Menú</h2>
+        <div id="menu-grid" class="grid">
+            <p>Cargando menú...</p>
+        </div>
+    </div>
+
+    <div class="cart-bar">
+        <div>
+            <strong style="font-size: 1.2rem;">Total: $<span id="total">0.00</span></strong>
+            <p style="margin: 0; color: #666;" id="items-count">0 artículos</p>
+        </div>
+        <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
+    </div>
+
+    <script>
+        let carrito = [];
+        let total = 0;
+
+        // Leer la URL para buscar el parámetro mesa
+        const parametrosURL = new URLSearchParams(window.location.search);
+        const numeroMesa = parametrosURL.get('mesa');
+
+        // Si no existe el parámetro ?mesa= se bloquea la vista
+        if (!numeroMesa) {
+            document.body.innerHTML = 
+                '<div class="pantalla-bloqueo">' +
+                    '<h1>📱</h1>' +
+                    '<h2>Escanea tu Código QR</h2>' +
+                    '<p>Por favor, escanea el código QR de tu mesa para poder hacer tu pedido.</p>' +
+                '</div>';
+        } else {
+            document.getElementById('info-mesa').innerText = 'Ordenando desde: Mesa ' + numeroMesa;
+            cargarMenu();
+        }
+
+        async function cargarMenu() {
+            try {
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/productos');
+                const productos = await respuesta.json();
+                
+                const grid = document.getElementById('menu-grid');
+                grid.innerHTML = ''; 
+
+                if(productos.length === 0) {
+                    grid.innerHTML = '<p>No hay productos disponibles.</p>';
+                    return;
+                }
+
+                productos.forEach(prod => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = 
+                        '<h3>' + prod.nombre + '</h3>' +
+                        '<p>$' + prod.precio + '</p>' +
+                        '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + prod.nombre + '\', ' + prod.precio + ')">Agregar</button>';
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                document.getElementById('menu-grid').innerHTML = '<p style="color:red;">Error al conectar con el servidor.</p>';
+            }
+        }
+
+        function agregarAlCarrito(id, nombre, precio) {
+            carrito.push({ id_producto: id, nombre: nombre, precio: precio });
+            total += parseFloat(precio);
+            
+            document.getElementById('total').innerText = total.toFixed(2);
+            document.getElementById('items-count').innerText = carrito.length + ' artículos';
+        }
+
+        async function enviarOrden() {
+            if (carrito.length === 0) {
+                alert("Agrega algo al carrito primero.");
+                return;
+            }
+            
+            const datosOrden = {
+                mesa: numeroMesa,
+                total: total,
+                carrito: carrito
+            };
+
+            try {
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/ordenes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosOrden)
+                });
+
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
+                    
+                    carrito = [];
+                    total = 0;
+                    document.getElementById('total').innerText = '0.00';
+                    document.getElementById('items-count').innerText = '0 artículos';
+                }
+            } catch (error) {
+                alert("Hubo un error al enviar la orden. Intenta de nuevo.");
+            }
+        }
+    </script>
+</body>
+</html>
