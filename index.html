@@ -14,10 +14,6 @@
         .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
         .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
         
-        /* Estilos para las opciones de hamburguesa */
-        .opciones-producto { margin: 10px 0; display: flex; flex-direction: column; gap: 5px; }
-        .select-opcion { padding: 5px; border-radius: 5px; border: 1px solid #ccc; font-size: 0.9rem; width: 100%; }
-
         /* Contenedor para los botones lado a lado */
         .botones-accion { display: flex; gap: 10px; justify-content: space-between; margin-top: 10px; }
         .btn-add, .btn-remove { 
@@ -67,11 +63,9 @@
         let carrito = [];
         let total = 0;
 
-        // Leer la URL para buscar el parámetro mesa
         const parametrosURL = new URLSearchParams(window.location.search);
         const numeroMesa = parametrosURL.get('mesa');
 
-        // Si no existe el parámetro ?mesa= se bloquea la vista
         if (!numeroMesa) {
             document.body.innerHTML = 
                 '<div class="pantalla-bloqueo">' +
@@ -98,38 +92,18 @@
                 }
 
                 productos.forEach(prod => {
-                    // Detectar si el producto es una hamburguesa (sin importar mayúsculas o minúsculas)
-                    const esHamburguesa = prod.nombre.toLowerCase().includes('hamburguesa');
-                    let opcionesHTML = '';
-
-                    // Si es hamburguesa, creamos los selectores
-                    if (esHamburguesa) {
-                        opcionesHTML = `
-                            <div class="opciones-producto">
-                                <select id="tamano-${prod.id_producto}" class="select-opcion">
-                                    <option value="Chica">Tamaño: Chica</option>
-                                    <option value="Grande">Tamaño: Grande</option>
-                                </select>
-                                <select id="carne-${prod.id_producto}" class="select-opcion">
-                                    <option value="Res">Carne: Res</option>
-                                    <option value="Pollo">Carne: Pollo</option>
-                                </select>
-                            </div>
-                        `;
-                    }
-
                     const card = document.createElement('div');
                     card.className = 'card';
-                    // Escapamos las comillas del nombre para evitar errores de sintaxis
+                    
+                    // Aseguramos que si el nombre tiene comillas no rompa el código
                     const nombreSeguro = prod.nombre.replace(/'/g, "\\'"); 
                     
                     card.innerHTML = 
                         '<h3>' + prod.nombre + '</h3>' +
                         '<p>$' + prod.precio + '</p>' +
-                        opcionesHTML +
                         '<div class="botones-accion">' +
-                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ', ' + esHamburguesa + ')">✖</button>' +
-                            '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ', ' + esHamburguesa + ')">✔</button>' +
+                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
+                            '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
                         '</div>';
                     grid.appendChild(card);
                 });
@@ -143,46 +117,18 @@
             document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
 
-        // Función para AGREGAR (✔)
-        function agregarAlCarrito(id, nombreBase, precio, esHamburguesa) {
-            let nombreFinal = nombreBase;
-            
-            // Si es hamburguesa, le pegamos las opciones elegidas al nombre
-            if (esHamburguesa) {
-                const tamano = document.getElementById('tamano-' + id).value;
-                const carne = document.getElementById('carne-' + id).value;
-                nombreFinal = `${nombreBase} (${tamano}, ${carne})`;
-            }
-
-            carrito.push({ id_producto: id, nombre: nombreFinal, precio: precio });
+        function agregarAlCarrito(id, nombre, precio) {
+            carrito.push({ id_producto: id, nombre: nombre, precio: precio });
             total += parseFloat(precio);
             actualizarTextosCarrito();
         }
 
-        // Función para QUITAR (✖)
-        function quitarUnidadDelCarrito(id, nombreBase, precio, esHamburguesa) {
-            let nombreFinal = nombreBase;
+        function quitarUnidadDelCarrito(id, precio) {
+            // Buscamos si el producto existe en el carrito
+            const index = carrito.findIndex(item => item.id_producto === id);
             
-            // Calculamos el nombre con las opciones actuales para saber qué borrar
-            if (esHamburguesa) {
-                const tamano = document.getElementById('tamano-' + id).value;
-                const carne = document.getElementById('carne-' + id).value;
-                nombreFinal = `${nombreBase} (${tamano}, ${carne})`;
-            }
-
-            // Buscamos el producto en el carrito desde el final hacia el principio
-            // Así borramos el último que se agregó con esas características exactas
-            let indiceABorrar = -1;
-            for (let i = carrito.length - 1; i >= 0; i--) {
-                if (carrito[i].id_producto === id && carrito[i].nombre === nombreFinal) {
-                    indiceABorrar = i;
-                    break;
-                }
-            }
-            
-            // Si lo encontramos, lo borramos
-            if (indiceABorrar !== -1) {
-                carrito.splice(indiceABorrar, 1);
+            if (index !== -1) {
+                carrito.splice(index, 1);
                 total -= parseFloat(precio);
                 if (total < 0) total = 0;
                 actualizarTextosCarrito();
