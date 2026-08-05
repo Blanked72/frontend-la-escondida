@@ -64,14 +64,16 @@
                 
                 if (respuesta.ok) {
                     alert("¡Cobro exitoso! El inventario se ha descontado automáticamente.");
-                    cargarOrdenesCaja(); // Actualiza la pantalla
+                    cargarOrdenesCaja();
+                } else {
+                    const errorBackend = await respuesta.json();
+                    alert(`El servidor falló al cobrar: ${errorBackend.error || 'Error desconocido'}`);
                 }
             } catch (error) {
-                alert("Hubo un error al procesar el pago.");
+                alert("Hubo un error de red al procesar el pago. Verifica tu conexión.");
             }
         }
 
-        // Cargar inmediatamente y actualizar cada 5 segundos
         cargarOrdenesCaja();
         setInterval(cargarOrdenesCaja, 5000);
     </script>
