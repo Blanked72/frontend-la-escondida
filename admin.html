@@ -212,7 +212,7 @@
             await fetch(`${API_URL}/recetas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_producto, id_insumo, cantidad_necesaria: cantidad })
+                body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida: cantidad })
             });
 
             document.getElementById('cantidad-insumo-receta').value = '';
@@ -236,7 +236,7 @@
                     <tr>
                         <td><span class="badge">Menú</span> <strong>${item.nombre_producto}</strong></td>
                         <td>${item.nombre_insumo}</td>
-                        <td>${item.cantidad_necesaria}</td>
+                        <td>${item.cantidad_requerida}</td>
                         <td><button class="btn-danger" onclick="quitarIngrediente(${item.id_producto}, ${item.id_insumo})">✖ Quitar</button></td>
                     </tr>`;
             });
