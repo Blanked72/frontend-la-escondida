@@ -93,6 +93,11 @@
     </div>
 </div>
 
+<!-- BOTÓN PARA DESBLOQUEAR SONIDO -->
+<button onclick="activarSonido()" style="position: fixed; bottom: 20px; left: 20px; background: #3498db; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 9999;">
+    🔊 Activar Sonido de Alertas
+</button>
+
 <!-- ALERTA DE INVENTARIO Y SONIDO -->
 <div id="alerta-inventario" style="display: none; position: fixed; bottom: 20px; right: 20px; background: #e74c3c; color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 9999; max-width: 300px; border-left: 5px solid #c0392b;">
     <h3 style="margin: 0 0 10px 0;">⚠️ Alerta de Stock</h3>
@@ -123,10 +128,7 @@
         select.innerHTML = '<option value="">Selecciona Insumo...</option>';
 
         data.forEach(i => {
-            // Llenar select de recetas
             select.innerHTML += `<option value="${i.id_insumo}">${i.nombre}</option>`;
-            
-            // Llenar tabla
             tbody.innerHTML += `
                 <tr>
                     <td>${i.id_insumo}</td>
@@ -168,7 +170,6 @@
         cargarInsumos();
     }
 
-    // NUEVA FUNCIÓN: Editar Límite Mínimo
     async function editarMinimo(id, nombre) {
         const nuevoMinimo = prompt(`¿A partir de qué cantidad quieres que el sistema te alerte que se está acabando: ${nombre}?`);
         if (!nuevoMinimo || isNaN(nuevoMinimo)) return;
@@ -271,6 +272,15 @@
     const tonoAlerta = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     let alertaSonando = false;
 
+    // Función vital para que el navegador dé permiso de reproducir audio
+    function activarSonido() {
+        tonoAlerta.play().then(() => {
+            alert("✅ ¡Sonido activado! Las alertas sonarán automáticamente.");
+        }).catch(e => {
+            alert("❌ Error al reproducir. Revisa el volumen de tu equipo.");
+        });
+    }
+
     async function checarInventarioAlertas() {
         try {
             const res = await fetch(`${API}/alertas/inventario`);
@@ -294,7 +304,7 @@
                 document.getElementById('alerta-inventario').style.display = 'block';
 
                 if (!alertaSonando) {
-                    tonoAlerta.play().catch(e => console.log("Clic requerido para audio."));
+                    tonoAlerta.play().catch(e => console.log("El navegador bloqueó el sonido. Presiona el botón de Activar Sonido."));
                     alertaSonando = true;
                 }
             } else {
