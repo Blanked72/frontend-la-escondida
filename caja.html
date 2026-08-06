@@ -13,6 +13,7 @@
         .total { font-size: 1.5rem; font-weight: bold; color: #c0392b; margin: 15px 0; }
         .btn-cobrar { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .btn-cobrar:hover { background-color: #2980b9; }
+        .btn-cobrar:disabled { background-color: #95a5a6; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -42,7 +43,7 @@
                     ticket.innerHTML = `
                         <h2>Orden #${orden.id_orden} - Mesa ${orden.numero_mesa}</h2>
                         <div class="total">Total: $${orden.total}</div>
-                        <button class="btn-cobrar" onclick="cobrarOrden(${orden.id_orden}, ${orden.total})">
+                        <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(${orden.id_orden}, ${orden.total})">
                             💵 Cobrar
                         </button>
                     `;
@@ -57,20 +58,35 @@
             const confirmar = confirm(`¿Confirmas el cobro de $${total} por la Orden #${id_orden}?`);
             if (!confirmar) return;
 
+            const boton = document.getElementById(`btn-${id_orden}`);
+            if (boton) {
+                boton.disabled = true;
+                boton.innerText = "⏳ Procesando...";
+            }
+
             try {
                 const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/pagar`, {
                     method: 'PUT'
                 });
                 
+                const resultado = await respuesta.json();
+                
                 if (respuesta.ok) {
-                    alert("¡Cobro exitoso! El inventario se ha descontado automáticamente.");
+                    alert(resultado.mensaje || "Cobro procesado correctamente.");
                     cargarOrdenesCaja();
                 } else {
-                    const errorBackend = await respuesta.json();
-                    alert(`El servidor falló al cobrar: ${errorBackend.error || 'Error desconocido'}`);
+                    alert(`El servidor falló al cobrar: ${resultado.error || 'Error desconocido'}`);
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.innerText = "💵 Cobrar";
+                    }
                 }
             } catch (error) {
                 alert("Hubo un error de red al procesar el pago. Verifica tu conexión.");
+                if (boton) {
+                    boton.disabled = false;
+                    boton.innerText = "💵 Cobrar";
+                }
             }
         }
 
