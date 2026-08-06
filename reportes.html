@@ -15,7 +15,7 @@
         .btn-actualizar { display: block; margin: 2rem auto; background-color: #34495e; color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 5px; cursor: pointer; }
         .btn-actualizar:hover { background-color: #2c3e50; }
         
-        /* Estilos para el historial de días */
+        /* Estilos para el Historial de Días */
         .seccion-historial { max-width: 800px; margin: 3rem auto 0; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
@@ -27,7 +27,7 @@
 
     <h1>📊 Resumen de Ventas del Día</h1>
     
-    <!-- VENTAS DEL DÍA ACTUAL -->
+    <!-- TARJETAS DEL DÍA ACTUAL -->
     <div class="dashboard">
         <div class="tarjeta-metrica">
             <h3>Ingresos Totales Hoy</h3>
@@ -48,7 +48,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Fecha</th>
+                    <th>Fecha (Año-Mes-Día)</th>
                     <th>Órdenes Cobradas</th>
                     <th>Total Vendido</th>
                 </tr>
@@ -60,26 +60,26 @@
     </div>
 
     <script>
-        const API_URL = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
+        const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
 
         async function cargarReporte() {
             try {
-                // 1. Obtener ventas EXCLUSIVAS de hoy (se reinicia a las 00:00)
-                const respuestaHoy = await fetch(`${API_URL}/hoy`);
+                // 1. Cargar lo vendido el día de hoy
+                const respuestaHoy = await fetch(`${API_BASE}/hoy`);
                 const datosHoy = await respuestaHoy.json();
                 
                 document.getElementById('total-vendido').innerText = parseFloat(datosHoy.total_vendido || 0).toFixed(2);
                 document.getElementById('total-ordenes').innerText = datosHoy.total_ordenes || 0;
 
-                // 2. Obtener el historial agrupado por fechas pasadas
-                const respuestaHistorial = await fetch(`${API_URL}/historial`);
+                // 2. Cargar el historial acumulado por días
+                const respuestaHistorial = await fetch(`${API_BASE}/historial`);
                 const diasAnteriores = await respuestaHistorial.json();
 
                 const tbody = document.getElementById('tabla-historial');
                 tbody.innerHTML = '';
 
-                if (diasAnteriores.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3">No hay historial registrado aún.</td></tr>';
+                if (!Array.isArray(diasAnteriores) || diasAnteriores.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No hay ventas registradas en días anteriores.</td></tr>';
                     return;
                 }
 
@@ -94,12 +94,12 @@
                 });
 
             } catch (error) {
-                console.error("Error al cargar el reporte:", error);
-                alert("No se pudo conectar con el servidor para obtener el reporte.");
+                console.error("Error al obtener reporte:", error);
+                alert("Ocurrió un error al cargar la información desde el servidor.");
             }
         }
 
-        // Cargar los datos automáticamente al abrir la página
+        // Cargar reporte automáticamente al abrir la vista
         cargarReporte();
     </script>
 </body>
