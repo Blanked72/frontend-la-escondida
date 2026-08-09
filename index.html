@@ -6,8 +6,11 @@
     <title>La Escondida - Menú</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; padding-bottom: 100px; }
-        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; }
+        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; position: relative; }
         header p { margin: 0; font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
+        
+        .btn-historial { background-color: #f39c12; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-top: 10px; cursor: pointer; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
         .container { padding: 1rem; max-width: 600px; margin: 0 auto; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
         .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
@@ -35,6 +38,19 @@
         .pantalla-bloqueo h1 { font-size: 4rem; margin: 0; }
         .pantalla-bloqueo h2 { color: #c0392b; }
         .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
+
+        /* Estilos de la ventana Modal para Historial */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 12px; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h2 { margin: 0; font-size: 1.3rem; color: #4a2c2a; }
+        .btn-close { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        table.tabla-historial { width: 100%; border-collapse: collapse; text-align: left; }
+        table.tabla-historial th { background: #ecf0f1; padding: 10px; border-bottom: 2px solid #bdc3c7; }
+        table.tabla-historial td { padding: 10px; border-bottom: 1px solid #ecf0f1; font-size: 0.95rem; }
+        .btn-ver-detalle { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-volver { background: #4a2c2a; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; margin-top: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -42,6 +58,7 @@
     <header>
         <h1>☕ La Escondida</h1>
         <p id="info-mesa">Buscando mesa...</p>
+        <button id="btn-ver-pedidos" class="btn-historial" style="display: none;" onclick="abrirHistorial()">📋 Ver Mis Pedidos</button>
     </header>
 
     <div class="container">
@@ -57,6 +74,19 @@
             <p style="margin: 0; color: #666;" id="items-count">0 artículos</p>
         </div>
         <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
+    </div>
+
+    <!-- VENTANA MODAL PARA MIS PEDIDOS Y DETALLES -->
+    <div id="modal-pedidos" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-titulo">Mis Pedidos</h2>
+                <button class="btn-close" onclick="cerrarModal()">✖ Cerrar</button>
+            </div>
+            <div id="modal-body">
+                <!-- Aquí se inyecta la tabla de historial o de detalles -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -75,6 +105,7 @@
                 '</div>';
         } else {
             document.getElementById('info-mesa').innerText = 'Ordenando desde: Mesa ' + numeroMesa;
+            document.getElementById('btn-ver-pedidos').style.display = 'inline-block'; // Mostrar el botón
             cargarMenu();
         }
 
@@ -95,7 +126,6 @@
                     const card = document.createElement('div');
                     card.className = 'card';
                     
-                    // Aseguramos que si el nombre tiene comillas no rompa el código
                     const nombreSeguro = prod.nombre.replace(/'/g, "\\'"); 
                     
                     card.innerHTML = 
@@ -124,9 +154,7 @@
         }
 
         function quitarUnidadDelCarrito(id, precio) {
-            // Buscamos si el producto existe en el carrito
             const index = carrito.findIndex(item => item.id_producto === id);
-            
             if (index !== -1) {
                 carrito.splice(index, 1);
                 total -= parseFloat(precio);
@@ -172,6 +200,80 @@
             } finally {
                 document.querySelector('.btn-order').disabled = false;
                 document.querySelector('.btn-order').innerText = 'Enviar Orden';
+            }
+        }
+
+        // ==========================================
+        // LÓGICA PARA VER EL HISTORIAL Y DETALLES
+        // ==========================================
+        
+        function cerrarModal() {
+            document.getElementById('modal-pedidos').style.display = 'none';
+        }
+
+        async function abrirHistorial() {
+            document.getElementById('modal-pedidos').style.display = 'flex';
+            document.getElementById('modal-titulo').innerText = 'Pedidos de tu Mesa';
+            document.getElementById('modal-body').innerHTML = '<p>Cargando tus órdenes...</p>';
+
+            try {
+                const res = await fetch('https://backend-la-escondida.onrender.com/api/ordenes');
+                const ordenes = await res.json();
+                
+                // Filtrar las órdenes para que el cliente solo vea las de su mesa
+                const misOrdenes = ordenes.filter(o => String(o.numero_mesa) === String(numeroMesa));
+
+                if(misOrdenes.length === 0) {
+                    document.getElementById('modal-body').innerHTML = '<p>Aún no has enviado ninguna orden.</p>';
+                    return;
+                }
+
+                let html = '<table class="tabla-historial">';
+                html += '<tr><th>ID</th><th>Estado</th><th>Total</th><th></th></tr>';
+                
+                misOrdenes.forEach(o => {
+                    let color = o.estado === 'Pendiente' ? 'red' : o.estado === 'Lista' ? '#d35400' : 'green';
+                    html += `<tr>
+                        <td><strong>#${o.id_orden}</strong></td>
+                        <td style="color: ${color}; font-weight: bold;">${o.estado}</td>
+                        <td>$${o.total}</td>
+                        <td><button class="btn-ver-detalle" onclick="verDetalleOrden(${o.id_orden})">Ver</button></td>
+                    </tr>`;
+                });
+                html += '</table>';
+                
+                document.getElementById('modal-body').innerHTML = html;
+            } catch(e) {
+                document.getElementById('modal-body').innerHTML = '<p style="color:red;">Error al cargar las órdenes.</p>';
+            }
+        }
+
+        async function verDetalleOrden(id_orden) {
+            document.getElementById('modal-titulo').innerText = 'Detalle de Orden #' + id_orden;
+            document.getElementById('modal-body').innerHTML = '<p>Cargando detalles...</p>';
+            
+            try {
+                const res = await fetch('https://backend-la-escondida.onrender.com/api/ordenes/' + id_orden + '/detalles');
+                const detalles = await res.json();
+                
+                let html = '<table class="tabla-historial">';
+                html += '<tr><th>Cant.</th><th>Producto</th><th>Precio</th></tr>';
+                
+                detalles.forEach(d => {
+                    const nombreProd = d.notas ? d.notas : (d.nombre || 'Desconocido');
+                    html += `<tr>
+                        <td><strong>${d.cantidad}x</strong></td>
+                        <td>${nombreProd}</td>
+                        <td>$${d.precio_unitario}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                
+                html += `<button class="btn-volver" onclick="abrirHistorial()">⬅ Volver a Mis Pedidos</button>`;
+                
+                document.getElementById('modal-body').innerHTML = html;
+            } catch(e) {
+                document.getElementById('modal-body').innerHTML = '<p style="color:red;">Error al cargar los detalles.</p>';
             }
         }
     </script>
