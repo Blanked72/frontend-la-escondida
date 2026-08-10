@@ -38,7 +38,7 @@
         .pantalla-bloqueo h2 { color: #c0392b; }
         .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
 
-        /* Estilos del modal del Carrito */
+        /* Estilos de las ventanas modales */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
         .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 12px; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
@@ -48,6 +48,12 @@
         table.tabla-historial { width: 100%; border-collapse: collapse; text-align: left; }
         table.tabla-historial th { background: #ecf0f1; padding: 10px; border-bottom: 2px solid #bdc3c7; }
         table.tabla-historial td { padding: 10px; border-bottom: 1px solid #ecf0f1; font-size: 0.95rem; }
+
+        /* Estilos para los extras */
+        .extra-item { display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .extra-item label { flex-grow: 1; margin-left: 10px; cursor: pointer; font-size: 1.1rem; }
+        .extra-precio { color: #d35400; font-weight: bold; }
+        .btn-confirmar-add { background-color: #27ae60; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -73,22 +79,48 @@
         <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
     </div>
 
-    <!-- VENTANA MODAL PARA VER EL CARRITO -->
+    <!-- MODAL DE EXTRAS AL AGREGAR PRODUCTO -->
+    <div id="modal-opciones" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="titulo-opciones">Personalizar</h2>
+                <button class="btn-close" onclick="cerrarModalOpciones()">✖</button>
+            </div>
+            <div id="lista-opciones">
+                <!-- Aquí se cargan los extras disponibles -->
+            </div>
+            <button class="btn-confirmar-add" onclick="confirmarAgregarAlCarrito()">Agregar al Carrito</button>
+        </div>
+    </div>
+
+    <!-- MODAL PARA VER EL CARRITO -->
     <div id="modal-carrito" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>🛒 Tu Selección Actual</h2>
-                <button class="btn-close" onclick="cerrarModal()">✖ Cerrar</button>
+                <button class="btn-close" onclick="cerrarModalCarrito()">✖ Cerrar</button>
             </div>
-            <div id="modal-body">
-                <!-- Aquí se inyecta la tabla con lo que están pidiendo -->
-            </div>
+            <div id="modal-body"></div>
         </div>
     </div>
 
     <script>
         let carrito = [];
         let total = 0;
+
+        // ==========================================
+        // LISTA DE EXTRAS DISPONIBLES (Puedes modificar los nombres y precios)
+        // ==========================================
+        const extrasDisponibles = [
+            { nombre: "Extra Queso", precio: 15 },
+            { nombre: "Extra Tocino", precio: 20 },
+            { nombre: "Aguacate", precio: 15 },
+            { nombre: "Papas Fritas extra", precio: 25 },
+            { nombre: "Sin Cebolla", precio: 0 } 
+        ];
+
+        // Variables temporales para cuando abren el modal
+        let productoSeleccionadoTemporamente = null;
 
         const parametrosURL = new URLSearchParams(window.location.search);
         const numeroMesa = parametrosURL.get('mesa');
@@ -122,15 +154,15 @@
                 productos.forEach(prod => {
                     const card = document.createElement('div');
                     card.className = 'card';
-                    
                     const nombreSeguro = prod.nombre.replace(/'/g, "\\'"); 
                     
+                    // OJO AQUÍ: Ahora el botón de quitar solo pide el ID, y el de agregar abre las opciones
                     card.innerHTML = 
                         '<h3>' + prod.nombre + '</h3>' +
                         '<p>$' + prod.precio + '</p>' +
                         '<div class="botones-accion">' +
-                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
-                            '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
+                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
+                            '<button class="btn-add" onclick="abrirOpciones(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
                         '</div>';
                     grid.appendChild(card);
                 });
@@ -139,30 +171,92 @@
             }
         }
 
+        // ==========================================
+        // LÓGICA DE EXTRAS
+        // ==========================================
+        function abrirOpciones(id, nombre, precio) {
+            productoSeleccionadoTemporamente = { id_producto: id, nombre: nombre, precio_base: parseFloat(precio) };
+            
+            document.getElementById('titulo-opciones').innerText = nombre;
+            let contenedorOpciones = document.getElementById('lista-opciones');
+            contenedorOpciones.innerHTML = '<p style="margin-top:0; color:#555;">¿Deseas agregar algo extra?</p>';
+
+            extrasDisponibles.forEach((extra, index) => {
+                let precioTexto = extra.precio > 0 ? `+$${extra.precio}` : 'Gratis';
+                contenedorOpciones.innerHTML += `
+                    <div class="extra-item">
+                        <input type="checkbox" id="extra-${index}" value="${index}" class="checkbox-extra" style="transform: scale(1.5);">
+                        <label for="extra-${index}">${extra.nombre}</label>
+                        <span class="extra-precio">${precioTexto}</span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('modal-opciones').style.display = 'flex';
+        }
+
+        function cerrarModalOpciones() {
+            document.getElementById('modal-opciones').style.display = 'none';
+            productoSeleccionadoTemporamente = null;
+        }
+
+        function confirmarAgregarAlCarrito() {
+            if(!productoSeleccionadoTemporamente) return;
+
+            let precioFinal = productoSeleccionadoTemporamente.precio_base;
+            let extrasElegidos = [];
+            
+            // Revisamos qué checkboxes marcó el cliente
+            const checkboxes = document.querySelectorAll('.checkbox-extra:checked');
+            checkboxes.forEach(cb => {
+                let indiceExtra = cb.value;
+                let extraInfo = extrasDisponibles[indiceExtra];
+                extrasElegidos.push(extraInfo.nombre);
+                precioFinal += extraInfo.precio;
+            });
+
+            // Modificamos el nombre del producto si eligió extras
+            let nombreFinal = productoSeleccionadoTemporamente.nombre;
+            if(extrasElegidos.length > 0) {
+                nombreFinal += ` (+ ${extrasElegidos.join(', ')})`;
+            }
+
+            // Agregamos al carrito
+            carrito.push({ 
+                id_producto: productoSeleccionadoTemporamente.id_producto, 
+                nombre: nombreFinal, 
+                precio: precioFinal 
+            });
+
+            total += precioFinal;
+            actualizarTextosCarrito();
+            cerrarModalOpciones();
+        }
+
+        // ==========================================
+        // LÓGICA DEL CARRITO 
+        // ==========================================
         function actualizarTextosCarrito() {
             document.getElementById('total').innerText = total.toFixed(2);
             document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
 
-        function agregarAlCarrito(id, nombre, precio) {
-            carrito.push({ id_producto: id, nombre: nombre, precio: precio });
-            total += parseFloat(precio);
-            actualizarTextosCarrito();
-        }
-
-        function quitarUnidadDelCarrito(id, precio) {
-            const index = carrito.findIndex(item => item.id_producto === id);
-            if (index !== -1) {
-                carrito.splice(index, 1);
-                total -= parseFloat(precio);
-                if (total < 0) total = 0;
-                actualizarTextosCarrito();
+        function quitarUnidadDelCarrito(id) {
+            // Buscamos el último producto agregado con ese ID (para no borrar uno con extras accidentalmente)
+            // Se busca desde el final hacia el principio del arreglo
+            for (let i = carrito.length - 1; i >= 0; i--) {
+                if (carrito[i].id_producto === id) {
+                    // Restamos exactamente lo que costaba ESE ítem en el carrito (incluyendo extras)
+                    total -= carrito[i].precio;
+                    if (total < 0) total = 0;
+                    
+                    carrito.splice(i, 1);
+                    actualizarTextosCarrito();
+                    return; // Terminamos después de borrar uno
+                }
             }
         }
 
-        // ==========================================
-        // LÓGICA PARA VER EL CARRITO ANTES DE ENVIAR
-        // ==========================================
         function verCarrito() {
             document.getElementById('modal-carrito').style.display = 'flex';
             const body = document.getElementById('modal-body');
@@ -172,24 +266,24 @@
                 return;
             }
 
-            // Agrupamos los productos para que no salgan repetidos renglón por renglón
+            // Agrupamos los productos POR SU NOMBRE FINAL (para que separe los que tienen extras de los que no)
             let productosAgrupados = {};
             carrito.forEach(item => {
-                if (!productosAgrupados[item.id_producto]) {
-                    productosAgrupados[item.id_producto] = {
+                if (!productosAgrupados[item.nombre]) {
+                    productosAgrupados[item.nombre] = {
                         nombre: item.nombre,
                         precio: item.precio,
                         cantidad: 0
                     };
                 }
-                productosAgrupados[item.id_producto].cantidad++;
+                productosAgrupados[item.nombre].cantidad++;
             });
 
             let html = '<table class="tabla-historial">';
             html += '<tr><th>Cant.</th><th>Producto</th><th>Subtotal</th></tr>';
             
-            for (let id in productosAgrupados) {
-                let p = productosAgrupados[id];
+            for (let clave in productosAgrupados) {
+                let p = productosAgrupados[clave];
                 let subtotalProducto = p.cantidad * p.precio;
                 
                 html += `<tr>
@@ -205,13 +299,10 @@
             body.innerHTML = html;
         }
 
-        function cerrarModal() {
+        function cerrarModalCarrito() {
             document.getElementById('modal-carrito').style.display = 'none';
         }
 
-        // ==========================================
-        // ENVIAR LA ORDEN
-        // ==========================================
         async function enviarOrden() {
             if (carrito.length === 0) {
                 alert("Agrega algo al carrito primero.");
@@ -241,7 +332,7 @@
                     carrito = [];
                     total = 0;
                     actualizarTextosCarrito();
-                    cerrarModal(); // Cerramos la ventana si la tenían abierta
+                    cerrarModalCarrito(); 
                 } else {
                     alert("Hubo un problema al procesar la orden.");
                 }
