@@ -17,7 +17,6 @@
         .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
         .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
         
-        /* Contenedor para los botones lado a lado */
         .botones-accion { display: flex; gap: 10px; justify-content: space-between; margin-top: 10px; }
         .btn-add, .btn-remove { 
             color: white; 
@@ -39,7 +38,6 @@
         .pantalla-bloqueo h2 { color: #c0392b; }
         .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
 
-        /* Estilos de la ventana Modal para Historial */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
         .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 12px; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
@@ -76,22 +74,22 @@
         <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
     </div>
 
-    <!-- VENTANA MODAL PARA MIS PEDIDOS Y DETALLES -->
     <div id="modal-pedidos" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modal-titulo">Mis Pedidos</h2>
                 <button class="btn-close" onclick="cerrarModal()">✖ Cerrar</button>
             </div>
-            <div id="modal-body">
-                <!-- Aquí se inyecta la tabla de historial o de detalles -->
-            </div>
+            <div id="modal-body"></div>
         </div>
     </div>
 
     <script>
         let carrito = [];
         let total = 0;
+        
+        // AQUÍ GUARDAMOS SOLO LAS ÓRDENES QUE HACE ESTE CLIENTE EN ESTA SESIÓN
+        let misOrdenesLocales = []; 
 
         const parametrosURL = new URLSearchParams(window.location.search);
         const numeroMesa = parametrosURL.get('mesa');
@@ -105,7 +103,7 @@
                 '</div>';
         } else {
             document.getElementById('info-mesa').innerText = 'Ordenando desde: Mesa ' + numeroMesa;
-            document.getElementById('btn-ver-pedidos').style.display = 'inline-block'; // Mostrar el botón
+            document.getElementById('btn-ver-pedidos').style.display = 'inline-block';
             cargarMenu();
         }
 
@@ -188,7 +186,10 @@
                 const resultado = await respuesta.json();
 
                 if (resultado.id_orden) {
-                    alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
+                    // GUARDAMOS EL ID DE LA ORDEN RECIÉN ENVIADA EN LA MEMORIA DEL TELÉFONO
+                    misOrdenesLocales.push(resultado.id_orden);
+
+                    alert('¡Orden enviada a cocina exitosamente!');
                     carrito = [];
                     total = 0;
                     actualizarTextosCarrito();
@@ -204,29 +205,29 @@
         }
 
         // ==========================================
-        // LÓGICA PARA VER EL HISTORIAL Y DETALLES
+        // LÓGICA DE HISTORIAL (SOLO ÓRDENES ACTUALES)
         // ==========================================
-        
         function cerrarModal() {
             document.getElementById('modal-pedidos').style.display = 'none';
         }
 
         async function abrirHistorial() {
             document.getElementById('modal-pedidos').style.display = 'flex';
-            document.getElementById('modal-titulo').innerText = 'Pedidos de tu Mesa';
+            document.getElementById('modal-titulo').innerText = 'Mis Pedidos Actuales';
+            
+            if (misOrdenesLocales.length === 0) {
+                document.getElementById('modal-body').innerHTML = '<p>Aún no has enviado ninguna orden en esta visita.</p>';
+                return;
+            }
+
             document.getElementById('modal-body').innerHTML = '<p>Cargando tus órdenes...</p>';
 
             try {
                 const res = await fetch('https://backend-la-escondida.onrender.com/api/ordenes');
-                const ordenes = await res.json();
+                const todasLasOrdenes = await res.json();
                 
-                // Filtrar las órdenes para que el cliente solo vea las de su mesa
-                const misOrdenes = ordenes.filter(o => String(o.numero_mesa) === String(numeroMesa));
-
-                if(misOrdenes.length === 0) {
-                    document.getElementById('modal-body').innerHTML = '<p>Aún no has enviado ninguna orden.</p>';
-                    return;
-                }
+                // FILTRAMOS PARA MOSTRAR SOLO LOS IDs QUE ESTÁN EN LA MEMORIA DE ESTE TELÉFONO
+                const misOrdenes = todasLasOrdenes.filter(o => misOrdenesLocales.includes(o.id_orden));
 
                 let html = '<table class="tabla-historial">';
                 html += '<tr><th>ID</th><th>Estado</th><th>Total</th><th></th></tr>';
@@ -249,7 +250,7 @@
         }
 
         async function verDetalleOrden(id_orden) {
-            document.getElementById('modal-titulo').innerText = 'Detalle de Orden #' + id_orden;
+            document.getElementById('modal-titulo').innerText = 'Detalles de tu Orden';
             document.getElementById('modal-body').innerHTML = '<p>Cargando detalles...</p>';
             
             try {
