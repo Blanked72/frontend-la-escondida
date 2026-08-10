@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <script>
+<script>
         const API = 'https://backend-la-escondida.onrender.com/api';
 
         // Cargar las órdenes al abrir la página
@@ -100,7 +100,8 @@
                             </div>
                             <p><strong>Orden:</strong> #${o.id_orden}</p>
                             <p><strong>Total:</strong> $${o.total}</p>
-                            <button class="btn-ver" onclick="verDetalles(${o.id_orden}, ${o.numero_mesa})">📋 Ver Detalles del Pedido</button>
+                            <!-- AQUÍ AGREGAMOS COMILLAS SIMPLES A LOS PARÁMETROS -->
+                            <button class="btn-ver" onclick="verDetalles('${o.id_orden}', '${o.numero_mesa}')">📋 Ver Detalles del Pedido</button>
                         </div>
                     `;
                 });
@@ -111,19 +112,34 @@
         }
 
         async function verDetalles(id_orden, mesa) {
+            // 1. PRIMERO abrimos el modal para que el usuario vea que sí hizo clic
+            document.getElementById('modal-detalles').style.display = 'flex';
             document.getElementById('modal-titulo').innerText = `Orden #${id_orden} - Mesa ${mesa}`;
-            const body = document.getElementById('modal-body');
-            body.innerHTML = '<p>Cargando platillos...</p>';
             
+            const body = document.getElementById('modal-body');
+            body.innerHTML = '<p style="text-align:center;">⏳ Cargando platillos...</p>';
+            
+            // 2. LUEGO pedimos los datos al backend
             try {
                 const res = await fetch(`${API}/ordenes/${id_orden}/detalles`);
+                
+                // Verificamos si el backend respondió correctamente
+                if (!res.ok) {
+                    throw new Error('No se pudo obtener el detalle de la orden');
+                }
+
                 const detalles = await res.json();
                 
+                if (detalles.length === 0) {
+                    body.innerHTML = '<p>Esta orden no tiene platillos registrados.</p>';
+                    return;
+                }
+
                 let html = '<table>';
                 html += '<tr><th>Cant.</th><th>Platillo</th></tr>';
                 
                 detalles.forEach(d => {
-                    const nombreProd = d.notas ? d.notas : (d.nombre || 'Desconocido');
+                    const nombreProd = d.notas ? d.notas : (d.nombre || 'Producto sin nombre');
                     html += `<tr>
                         <td><strong>${d.cantidad}x</strong></td>
                         <td>${nombreProd}</td>
@@ -132,9 +148,14 @@
                 
                 html += '</table>';
                 body.innerHTML = html;
-                document.getElementById('modal-detalles').style.display = 'flex';
+
             } catch(error) {
-                body.innerHTML = '<p style="color:red;">Error al cargar detalles.</p>';
+                console.error(error);
+                body.innerHTML = `
+                    <p style="color:red; text-align:center;">
+                        ⚠️ No se pudieron cargar los detalles. <br><br>
+                        Asegúrate de que tu Backend (API) tenga configurada la ruta para los detalles de la orden.
+                    </p>`;
             }
         }
 
