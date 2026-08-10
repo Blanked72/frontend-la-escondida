@@ -11,6 +11,7 @@
         .ticket { background-color: #fff; color: #000; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-top: 5px solid #e74c3c; }
         .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; border-bottom: 2px dashed #ccc; padding-bottom: 5px; }
         .item { font-size: 1.1rem; margin: 5px 0; font-weight: bold; }
+        .alerta-insumo { background-color: #fdecea; color: #c0392b; font-weight: bold; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.95rem; }
         .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
     </style>
 </head>
@@ -42,7 +43,7 @@
 
                 const ordenesAgrupadas = datos.reduce((acc, fila) => {
                     if (!acc[fila.id_orden]) {
-                        acc[fila.id_orden] = { mesa: fila.numero_mesa, productos: [] };
+                        acc[fila.id_orden] = { mesa: fila.numero_mesa, productos: [], alerta: fila.alerta_insumo };
                     }
                     acc[fila.id_orden].productos.push({ nombre: fila.nombre, cantidad: fila.cantidad });
                     return acc;
@@ -55,11 +56,16 @@
                         htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}</div>`;
                     });
 
+                    const htmlAlerta = orden.alerta
+                        ? `<div class="alerta-insumo">⚠️ Falta insumo: ${orden.alerta}</div>`
+                        : '';
+
                     const ticket = document.createElement('div');
                     ticket.className = 'ticket';
                     ticket.innerHTML = `
                         <h2>Orden #${id_orden} - Mesa ${orden.mesa}</h2>
                         ${htmlProductos}
+                        ${htmlAlerta}
                         <button class="btn-listo" onclick="marcarLista(${id_orden})">✅ Marcar como Lista</button>
                     `;
                     monitor.appendChild(ticket);
