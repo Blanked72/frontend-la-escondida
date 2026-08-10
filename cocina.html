@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Cocina</title>
+    <title>La Escondida - Monitor de Cocina</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .card-orden { border-left: 5px solid #ffc107; }
-        .card-domicilio { border-left: 5px solid #0d6efd; }
+        body { background-color: #1a1d20; color: #f8f9fa; font-family: system-ui; }
+        .card-orden { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .header-pendiente { background-color: #ffc107; color: #000; font-weight: bold; border-radius: 12px 12px 0 0; }
+        .header-domicilio { background-color: #0d6efd; color: #fff; font-weight: bold; border-radius: 12px 12px 0 0; }
+        .badge-cantidad { font-size: 1.2rem; min-width: 32px; }
+        .item-comanda { font-size: 1.1rem; }
     </style>
 </head>
 <body class="p-4">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Comandos de Cocina</h2>
-            <button class="btn btn-outline-secondary" onclick="cargarCocina()">Actualizar Manualmente</button>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <h1 class="h2 mb-0">👨‍🍳 Comandas de Cocina</h1>
+            <button class="btn btn-warning fw-bold px-4" onclick="cargarCocina()">🔄 Actualizar</button>
         </div>
 
-        <div id="contenedor-ordenes" class="row g-3">
-            <!-- Las órdenes se cargarán dinámicamente aquí -->
+        <div id="contenedor-ordenes" class="row g-4">
+            <!-- Comandas -->
         </div>
     </div>
 
@@ -30,46 +33,45 @@
             try {
                 const response = await fetch(`${API_URL}/ordenes`);
                 const ordenes = await response.json();
-                
                 const contenedor = document.getElementById('contenedor-ordenes');
                 contenedor.innerHTML = '';
 
-                // Filtrar solo las órdenes pendientes o a domicilio
                 const pendientes = ordenes.filter(o => o.estado === 'Pendiente' || o.estado === 'A Domicilio');
 
                 if (pendientes.length === 0) {
-                    contenedor.innerHTML = '<div class="col-12"><div class="alert alert-info text-center">No hay órdenes pendientes en cocina.</div></div>';
+                    contenedor.innerHTML = '<div class="col-12 text-center py-5"><h3 class="text-muted">No hay pedidos pendientes por preparar ✨</h3></div>';
                     return;
                 }
 
                 pendientes.forEach(orden => {
                     const esDomicilio = orden.estado === 'A Domicilio';
-                    const tarjetaClass = esDomicilio ? 'card-domicilio' : 'card-orden';
-                    
+                    const headerClass = esDomicilio ? 'header-domicilio' : 'header-pendiente';
+
                     let detallesHtml = '';
                     if (orden.detalles && orden.detalles.length > 0) {
                         detallesHtml = orden.detalles.map(d => `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><strong>${d.cantidad}x</strong> ${d.producto || d.notas || 'Producto'}</span>
+                            <li class="list-group-item bg-dark text-white border-secondary d-flex align-items-center py-3 item-comanda">
+                                <span class="badge bg-warning text-dark badge-cantidad me-3">${d.cantidad}</span>
+                                <span>${d.producto || d.notas || 'Producto sin especificar'}</span>
                             </li>
                         `).join('');
-                    } else {
-                        detallesHtml = '<li class="list-group-item text-muted">Sin detalles especificados</li>';
                     }
 
                     contenedor.innerHTML += `
-                        <div class="col-md-4">
-                            <div class="card shadow-sm ${tarjetaClass}">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">${orden.numero_mesa}</h5>
-                                    <span class="badge ${esDomicilio ? 'bg-primary' : 'bg-warning text-dark'}">${orden.estado}</span>
+                        <div class="col-md-6 col-lg-4 col-xl-3">
+                            <div class="card card-orden bg-secondary text-white h-100">
+                                <div class="card-header ${headerClass} d-flex justify-content-between align-items-center p-3">
+                                    <span class="fs-4">${orden.numero_mesa}</span>
+                                    <span class="badge bg-dark">${orden.estado}</span>
                                 </div>
-                                <div class="card-body">
-                                    <ul class="list-group list-group-flush mb-3">
+                                <div class="card-body p-0">
+                                    <ul class="list-group list-group-flush">
                                         ${detallesHtml}
                                     </ul>
-                                    <button class="btn btn-success w-100" onclick="marcarEntregado(${orden.id_orden})">
-                                        Marcar como Listo / Entregado
+                                </div>
+                                <div class="card-footer bg-dark border-secondary p-3">
+                                    <button class="btn btn-success w-100 btn-lg fw-bold" onclick="marcarEntregado(${orden.id_orden})">
+                                        ✓ Marcar Listo
                                     </button>
                                 </div>
                             </div>
@@ -77,29 +79,20 @@
                     `;
                 });
             } catch (error) {
-                console.error('Error al cargar órdenes de cocina:', error);
+                console.error('Error en cocina:', error);
             }
         }
 
         async function marcarEntregado(id) {
             try {
-                const response = await fetch(`${API_URL}/ordenes/${id}/entregar`, {
-                    method: 'PUT'
-                });
-                if (response.ok) {
-                    cargarCocina();
-                } else {
-                    alert('Error al actualizar la orden');
-                }
+                const res = await fetch(`${API_URL}/ordenes/${id}/entregar`, { method: 'PUT' });
+                if (res.ok) cargarCocina();
             } catch (error) {
-                console.error('Error al entregar orden:', error);
+                console.error('Error al entregar:', error);
             }
         }
 
-        // Auto-refresco cada 10 segundos
-        setInterval(cargarCocina, 10000);
-        
-        // Carga inicial
+        setInterval(cargarCocina, 7000);
         cargarCocina();
     </script>
 </body>
