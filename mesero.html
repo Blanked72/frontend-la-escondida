@@ -3,83 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Toma de Pedidos</title>
+    <title>La Escondida - Control de Meseros</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="p-4">
+<body class="bg-light p-4">
     <div class="container">
-        <h2 class="mb-4">Módulo de Meseros</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📋 Monitoreo de Mesas y Órdenes</h2>
+            <button class="btn btn-outline-primary" onclick="cargarOrdenes()">🔄 Refrescar</button>
+        </div>
 
-        <div class="row">
-            <!-- Formulario de Nuevo Pedido -->
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Crear Nueva Orden</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="form-orden" onsubmit="guardarOrden(event)">
-                            <div class="mb-3">
-                                <label for="mesa" class="form-label">Mesa / Identificador de Pedido</label>
-                                <input type="text" class="form-control" id="mesa" placeholder="Ej: Mesa 4 o Pedido Domicilio" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Seleccionar Productos</label>
-                                <div class="row g-2 mb-2">
-                                    <div class="col-7">
-                                        <select class="form-select" id="select-producto">
-                                            <option value="">Cargando productos...</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-3">
-                                        <input type="number" class="form-control" id="cantidad" value="1" min="1">
-                                    </div>
-                                    <div class="col-2">
-                                        <button type="button" class="btn btn-secondary w-100" onclick="agregarAlCarrito()">+</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <h6>Resumen del Pedido:</h6>
-                                <ul class="list-group mb-2" id="lista-carrito">
-                                    <li class="list-group-item text-muted text-center">No hay productos agregados</li>
-                                </ul>
-                                <div class="text-end fw-bold fs-5">
-                                    Total: $<span id="total-pedido">0.00</span>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn btn-success w-100">Enviar Orden a Cocina</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Listado de Órdenes Activas -->
-            <div class="col-md-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0">Órdenes del Día</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Mesa</th>
-                                        <th>Total</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabla-ordenes-activas">
-                                    <!-- Carga dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th># Orden</th>
+                                <th>Mesa / Cliente</th>
+                                <th>Detalles del Pedido</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-ordenes-activas">
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">Cargando órdenes del día...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -87,126 +39,6 @@
 
     <script>
         const API_URL = 'https://backend-la-escondida.onrender.com/api';
-        let productosDisponibles = [];
-        let carrito = [];
-
-        async function cargarProductos() {
-            try {
-                const res = await fetch(`${API_URL}/productos`);
-                productosDisponibles = await res.json();
-                
-                const select = document.getElementById('select-producto');
-                select.innerHTML = '<option value="">-- Selecciona un Producto --</option>';
-                
-                productosDisponibles.forEach(prod => {
-                    select.innerHTML += `<option value="${prod.id_producto}">${prod.nombre} - $${prod.precio}</option>`;
-                });
-            } catch (error) {
-                console.error('Error al cargar productos:', error);
-            }
-        }
-
-        function agregarAlCarrito() {
-            const select = document.getElementById('select-producto');
-            const idProd = select.value;
-            const cantidad = parseInt(document.getElementById('cantidad').value) || 1;
-
-            if (!idProd) return alert('Selecciona un producto');
-
-            const prod = productosDisponibles.find(p => p.id_producto == idProd);
-            if (!prod) return;
-
-            const existente = carrito.find(item => item.id_producto == idProd);
-            if (existente) {
-                existente.cantidad += cantidad;
-            } else {
-                carrito.push({
-                    id_producto: prod.id_producto,
-                    nombre: prod.nombre,
-                    precio: prod.precio,
-                    cantidad: cantidad
-                });
-            }
-
-            actualizarVistaCarrito();
-        }
-
-        function actualizarVistaCarrito() {
-            const lista = document.getElementById('lista-carrito');
-            const totalSpan = document.getElementById('total-pedido');
-            
-            if (carrito.length === 0) {
-                lista.innerHTML = '<li class="list-group-item text-muted text-center">No hay productos agregados</li>';
-                totalSpan.innerText = '0.00';
-                return;
-            }
-
-            lista.innerHTML = '';
-            let total = 0;
-
-            carrito.forEach((item, index) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-
-                lista.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>${item.nombre}</strong><br>
-                            <small class="text-muted">$${item.precio} x ${item.cantidad}</small>
-                        </div>
-                        <div>
-                            <span class="me-2 fw-bold">$${subtotal.toFixed(2)}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDelCarrito(${index})">&times;</button>
-                        </div>
-                    </li>
-                `;
-            });
-
-            totalSpan.innerText = total.toFixed(2);
-        }
-
-        function eliminarDelCarrito(index) {
-            carrito.splice(index, 1);
-            actualizarVistaCarrito();
-        }
-
-        async function guardarOrden(event) {
-            event.preventDefault();
-
-            if (carrito.length === 0) {
-                alert('Debes agregar al menos un producto a la orden');
-                return;
-            }
-
-            const mesa = document.getElementById('mesa').value;
-            const total = parseFloat(document.getElementById('total-pedido').innerText);
-
-            const payload = {
-                numero_mesa: mesa,
-                detalles: carrito,
-                total: total
-            };
-
-            try {
-                const res = await fetch(`${API_URL}/ordenes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    alert('Orden enviada exitosamente');
-                    carrito = [];
-                    document.getElementById('form-orden').reset();
-                    actualizarVistaCarrito();
-                    cargarOrdenes();
-                } else {
-                    alert('Error al guardar la orden');
-                }
-            } catch (error) {
-                console.error('Error al enviar orden:', error);
-            }
-        }
 
         async function cargarOrdenes() {
             try {
@@ -216,23 +48,40 @@
                 const tbody = document.getElementById('tabla-ordenes-activas');
                 tbody.innerHTML = '';
 
+                if (ordenes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay órdenes registradas hoy</td></tr>';
+                    return;
+                }
+
                 ordenes.forEach(o => {
+                    let itemsStr = '';
+                    if (o.detalles && o.detalles.length > 0) {
+                        itemsStr = o.detalles.map(d => `${d.cantidad}x ${d.producto || 'Producto'}`).join(', ');
+                    } else {
+                        itemsStr = 'Sin detalles';
+                    }
+
+                    let badgeColor = 'bg-secondary';
+                    if (o.estado === 'Pendiente') badgeColor = 'bg-warning text-dark';
+                    if (o.estado === 'Entregado') badgeColor = 'bg-info text-dark';
+                    if (o.estado === 'Pagado') badgeColor = 'bg-success';
+
                     tbody.innerHTML += `
                         <tr>
-                            <td>#${o.id_orden}</td>
-                            <td>${o.numero_mesa}</td>
-                            <td>$${parseFloat(o.total).toFixed(2)}</td>
-                            <td><span class="badge bg-secondary">${o.estado}</span></td>
+                            <td class="fw-bold">#${o.id_orden}</td>
+                            <td class="fs-5 fw-bold">${o.numero_mesa}</td>
+                            <td><small class="text-muted">${itemsStr}</small></td>
+                            <td class="fw-bold">$${parseFloat(o.total).toFixed(2)}</td>
+                            <td><span class="badge ${badgeColor} px-3 py-2">${o.estado}</span></td>
                         </tr>
                     `;
                 });
             } catch (error) {
-                console.error('Error al cargar lista de órdenes:', error);
+                console.error('Error al cargar órdenes:', error);
             }
         }
 
-        // Carga inicial
-        cargarProductos();
+        setInterval(cargarOrdenes, 5000);
         cargarOrdenes();
     </script>
 </body>
