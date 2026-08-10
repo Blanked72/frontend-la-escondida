@@ -2,68 +2,98 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reportes de Ventas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Escondida - Reportes</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .resumen { display: flex; gap: 20px; margin-bottom: 20px; }
-        .box { padding: 20px; border-radius: 8px; background: #e3f2fd; flex: 1; text-align: center; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #0d47a1; color: white; }
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; }
+        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        nav a { padding: 8px 12px; background: #2c3e50; color: white; text-decoration: none; border-radius: 4px; }
+        .kpi-container { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+        .kpi-card { background: white; padding: 20px; border-radius: 8px; width: 220px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #27ae60; }
+        .kpi-card h3 { margin: 0; color: #7f8c8d; font-size: 0.9em; }
+        .kpi-card .value { font-size: 1.8em; font-weight: bold; margin: 10px 0; color: #2c3e50; }
+        table { width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c3e50; color: white; }
     </style>
 </head>
 <body>
-    <h2>📊 Ventas Diarias</h2>
+    <header>
+        <h1>Reportes de Ventas</h1>
+        <nav>
+            <a href="index.html">Tomar Orden</a>
+            <a href="cocina.html">Cocina</a>
+            <a href="caja.html">Caja</a>
+            <a href="inventario.html">Inventario</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
 
-    <div class="resumen">
-        <div class="box">
-            <h3>Órdenes Cobradas</h3>
-            <h1 id="total-ordenes">0</h1>
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h3>VENTAS HOY</h3>
+            <div id="hoy-total" class="value">$0.00</div>
+            <span id="hoy-ordenes">0 órdenes</span>
         </div>
-        <div class="box" style="background:#e8f5e9;">
-            <h3>Total Generado</h3>
-            <h1 id="total-dinero">$0.00</h1>
+        <div class="kpi-card" style="border-top-color: #2980b9;">
+            <h3>VENTAS ACUMULADAS</h3>
+            <div id="general-total" class="value">$0.00</div>
+            <span id="general-ordenes">0 órdenes</span>
         </div>
     </div>
 
-    <h3>Historial de Ventas</h3>
+    <h2 style="text-align: center;">Historial Diario</h2>
     <table>
         <thead>
             <tr>
-                <th>N° Orden</th>
-                <th>Mesa</th>
-                <th>Total</th>
-                <th>Fecha/Hora</th>
+                <th>Fecha</th>
+                <th>Órdenes Cobradas</th>
+                <th>Total Vendido</th>
             </tr>
         </thead>
-        <tbody id="tabla-reporte"></tbody>
+        <tbody id="tabla-historial">
+            <tr><td colspan="3" style="text-align:center">Cargando historial...</td></tr>
+        </tbody>
     </table>
 
     <script>
-        const API_URL = 'https://tu-app-en-render.onrender.com/api';
+        const API_URL = 'http://localhost:3000/api';
 
-        async function cargarReporte() {
-            const res = await fetch(`${API_URL}/reportes/ventas`);
-            const data = await res.json();
+        async function cargarReportes() {
+            try {
+                const resHoy = await fetch(`${API_URL}/reportes/ventas/hoy`);
+                const hoy = await resHoy.json();
+                document.getElementById('hoy-total').textContent = `$${parseFloat(hoy.total_vendido).toFixed(2)}`;
+                document.getElementById('hoy-ordenes').textContent = `${hoy.total_ordenes} órdenes`;
 
-            document.getElementById('total-ordenes').innerText = data.resumen.ordenes_totales;
-            document.getElementById('total-dinero').innerText = `$${parseFloat(data.resumen.total_ventas).toFixed(2)}`;
+                const resGen = await fetch(`${API_URL}/reportes/ventas`);
+                const gen = await resGen.json();
+                document.getElementById('general-total').textContent = `$${parseFloat(gen.total_vendido).toFixed(2)}`;
+                document.getElementById('general-ordenes').textContent = `${gen.total_ordenes} órdenes`;
 
-            const tbody = document.getElementById('tabla-reporte');
-            tbody.innerHTML = '';
-            data.historial.forEach(h => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>#${h.id_orden}</td>
-                        <td>Mesa ${h.numero_mesa}</td>
-                        <td>$${parseFloat(h.total).toFixed(2)}</td>
-                        <td>${new Date(h.fecha_creacion).toLocaleString()}</td>
-                    </tr>
-                `;
-            });
+                const resHist = await fetch(`${API_URL}/reportes/ventas/historial`);
+                const historial = await resHist.json();
+                const tbody = document.getElementById('tabla-historial');
+                tbody.innerHTML = '';
+
+                historial.forEach(h => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${h.fecha}</strong></td>
+                        <td>${h.total_ordenes}</td>
+                        <td>$${parseFloat(h.total_vendido).toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error('Error cargando reportes:', err);
+            }
         }
 
-        cargarReporte();
+        window.onload = cargarReportes;
     </script>
 </body>
 </html>

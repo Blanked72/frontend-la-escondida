@@ -2,65 +2,144 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Caja - Cobro de Órdenes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Escondida - Caja</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #333; color: white; }
-        button { background: #9c27b0; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; }
+        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        nav a { padding: 8px 12px; background: #2c3e50; color: white; text-decoration: none; border-radius: 4px; }
+        table { width: 100%; max-width: 900px; margin: 0 auto; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c3e50; color: white; }
+        .btn-pagar { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-ver { background: #2980b9; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
+        .status-Lista { background: #d4edda; color: #155724; }
+        .status-Pendiente { background: #fff3cd; color: #856404; }
+        .status-Domicilio { background: #d1ecf1; color: #0c5460; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%; }
+        .close-btn { background: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; float: right; }
     </style>
 </head>
 <body>
-    <h2>💵 Módulo de Caja</h2>
+    <header>
+        <h1>Módulo de Caja y Cobro</h1>
+        <nav>
+            <a href="index.html">Tomar Orden</a>
+            <a href="cocina.html">Cocina</a>
+            <a href="caja.html">Caja</a>
+            <a href="inventario.html">Inventario</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
+
     <table>
         <thead>
             <tr>
-                <th>N° Orden</th>
-                <th>Mesa</th>
+                <th># Orden</th>
+                <th>Ubicación / Mesa</th>
                 <th>Total</th>
                 <th>Estado</th>
-                <th>Acción</th>
+                <th>Acciones</th>
             </tr>
         </thead>
-        <tbody id="tabla-caja"></tbody>
+        <tbody id="tabla-caja">
+            <tr><td colspan="5" style="text-align:center">Cargando órdenes para cobrar...</td></tr>
+        </tbody>
     </table>
 
+    <div id="modal-detalles" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="cerrarModal()">X</button>
+            <h3 id="modal-titulo">Detalle de Orden</h3>
+            <ul id="lista-detalles"></ul>
+        </div>
+    </div>
+
     <script>
-        const API_URL = 'https://tu-app-en-render.onrender.com/api';
+        const API_URL = 'http://localhost:3000/api';
 
         async function cargarCaja() {
-            const res = await fetch(`${API_URL}/ordenes`);
-            const ordenes = await res.json();
-            
-            const paraCobrar = ordenes.filter(o => o.estado === 'Entregado');
-            const tbody = document.getElementById('tabla-caja');
-            tbody.innerHTML = '';
+            try {
+                const res = await fetch(`${API_URL}/caja`);
+                const ordenes = await res.json();
+                const tbody = document.getElementById('tabla-caja');
+                tbody.innerHTML = '';
 
-            paraCobrar.forEach(o => {
-                tbody.innerHTML += `
-                    <tr>
+                if (ordenes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay órdenes pendientes de cobro</td></tr>';
+                    return;
+                }
+
+                ordenes.forEach(o => {
+                    const tr = document.createElement('tr');
+                    const badgeClass = o.estado === 'A Domicilio' ? 'status-Domicilio' : `status-${o.estado}`;
+                    tr.innerHTML = `
                         <td>#${o.id_orden}</td>
-                        <td>Mesa ${o.numero_mesa}</td>
+                        <td>${o.numero_mesa}</td>
                         <td>$${parseFloat(o.total).toFixed(2)}</td>
-                        <td><b style="color:green;">${o.estado}</b></td>
-                        <td><button onclick="cobrar(${o.id_orden})">💳 Cobrar y Finalizar</button></td>
-                    </tr>
-                `;
-            });
+                        <td><span class="badge ${badgeClass}">${o.estado}</span></td>
+                        <td>
+                            <button class="btn-ver" onclick="verDetalles(${o.id_orden})">Ver Ticket</button>
+                            <button class="btn-pagar" onclick="cobrarOrden(${o.id_orden})">Cobrar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Error cargando caja:', err);
+            }
         }
 
-        async function cobrar(id) {
-            await fetch(`${API_URL}/ordenes/${id}/estado`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: 'Pagado' })
-            });
-            cargarCaja();
+        async function verDetalles(id) {
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id}/detalles`);
+                const detalles = await res.json();
+                
+                document.getElementById('modal-titulo').textContent = `Detalles de Orden #${id}`;
+                const lista = document.getElementById('lista-detalles');
+                lista.innerHTML = '';
+
+                detalles.forEach(d => {
+                    const li = document.createElement('li');
+                    li.style.padding = '8px 0';
+                    li.innerHTML = `<strong>${d.cantidad}x</strong> ${d.nombre} - $${parseFloat(d.precio_unitario).toFixed(2)} c/u`;
+                    lista.appendChild(li);
+                });
+
+                document.getElementById('modal-detalles').style.display = 'flex';
+            } catch (err) {
+                alert('No se pudieron obtener los detalles');
+            }
         }
 
-        setInterval(cargarCaja, 5000);
-        cargarCaja();
+        function cerrarModal() {
+            document.getElementById('modal-detalles').style.display = 'none';
+        }
+
+        async function cobrarOrden(id) {
+            if (!confirm(`¿Confirmar cobro de la orden #${id}?`)) return;
+
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id}/pagar`, { method: 'PUT' });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.mensaje);
+                    cargarCaja();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('No se pudo procesar el cobro.');
+            }
+        }
+
+        window.onload = cargarCaja;
     </script>
 </body>
 </html>

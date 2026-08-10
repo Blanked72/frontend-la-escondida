@@ -2,84 +2,187 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Inventario de Insumos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Escondida - Inventario</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .bajo-stock { background-color: #ffcdd2; color: #b71c1c; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #333; color: white; }
+        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; }
+        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        nav a { padding: 8px 12px; background: #2c3e50; color: white; text-decoration: none; border-radius: 4px; }
+        .container { max-width: 950px; margin: 0 auto; }
+        .alert-box { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .form-panel { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-inline { display: flex; gap: 10px; }
+        input[type="text"], input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
+        button { background: #2980b9; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #2c3e50; color: white; }
+        .critical { background: #ffe6e6; }
     </style>
 </head>
 <body>
-    <h2>📦 Gestión de Inventario</h2>
+    <header>
+        <h1>Control de Inventario e Insumos</h1>
+        <nav>
+            <a href="index.html">Tomar Orden</a>
+            <a href="cocina.html">Cocina</a>
+            <a href="caja.html">Caja</a>
+            <a href="inventario.html">Inventario</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
 
-    <div>
-        <h3>Agregar Insumo</h3>
-        <input type="text" id="insumo-nombre" placeholder="Nombre del Insumo">
-        <input type="number" step="0.01" id="insumo-stock" placeholder="Cantidad Inicial">
-        <input type="number" step="0.01" id="insumo-min" placeholder="Stock Mínimo">
-        <button onclick="agregarInsumo()" style="background:#28a745; color:white; border:none; padding:8px;">Agregar Insumo</button>
+    <div class="container">
+        <div id="box-alertas" class="alert-box">
+            <h3>⚠️ Alertas de Inventario Crítico</h3>
+            <ul id="lista-alertas"></ul>
+        </div>
+
+        <div class="form-panel">
+            <h3>Registrar Nuevo Insumo</h3>
+            <div class="form-inline">
+                <input type="text" id="insumo-nombre" placeholder="Nombre del Insumo">
+                <input type="number" id="insumo-cantidad" placeholder="Cantidad Inicial" step="0.01">
+                <button onclick="crearInsumo()">Guardar Insumo</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Insumo</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mínimo</th>
+                    <th>Agregar Stock</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-insumos">
+                <tr><td colspan="5" style="text-align:center">Cargando insumos...</td></tr>
+            </tbody>
+        </table>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Insumo</th>
-                <th>Cantidad Actual</th>
-                <th>Stock Mínimo</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="tabla-insumos"></tbody>
-    </table>
-
     <script>
-        const API_URL = 'https://tu-app-en-render.onrender.com/api';
+        const API_URL = 'http://localhost:3000/api';
 
-        async function cargarInsumos() {
-            const res = await fetch(`${API_URL}/insumos`);
-            const insumos = await res.json();
-            const tbody = document.getElementById('tabla-insumos');
-            tbody.innerHTML = '';
-
-            insumos.forEach(i => {
-                const alerta = parseFloat(i.cantidad_actual) <= parseFloat(i.stock_minimo);
-                tbody.innerHTML += `
-                    <tr class="${alerta ? 'bajo-stock' : ''}">
-                        <td>${i.id_insumo}</td>
-                        <td>${i.nombre}</td>
-                        <td>${i.cantidad_actual}</td>
-                        <td>${i.stock_minimo}</td>
-                        <td>${alerta ? '⚠️ STOCK BAJO' : '✅ SUFICIENTE'}</td>
-                        <td>
-                            <button onclick="eliminarInsumo(${i.id_insumo})" style="background:red; color:white; border:none; padding:5px;">Eliminar</button>
-                        </td>
-                    </tr>
-                `;
-            });
+        async function cargarTodo() {
+            await cargarAlertas();
+            await cargarInsumos();
         }
 
-        async function agregarInsumo() {
-            const body = {
-                nombre: document.getElementById('insumo-nombre').value,
-                cantidad_actual: document.getElementById('insumo-stock').value,
-                stock_minimo: document.getElementById('insumo-min').value
-            };
-            await fetch(`${API_URL}/insumos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            cargarInsumos();
-        }
+        async function cargarAlertas() {
+            try {
+                const res = await fetch(`${API_URL}/alertas/inventario`);
+                const alertas = await res.json();
+                const box = document.getElementById('box-alertas');
+                const ul = document.getElementById('lista-alertas');
 
-        async function eliminarInsumo(id) {
-            if (confirm('¿Eliminar insumo?')) {
-                await fetch(`${API_URL}/insumos/${id}`, { method: 'DELETE' });
-                cargarInsumos();
+                if (alertas.length > 0) {
+                    ul.innerHTML = '';
+                    alertas.forEach(a => {
+                        const li = document.createElement('li');
+                        li.textContent = `${a.nombre}: ${a.cantidad_actual} en stock (mínimo requerido: ${a.stock_minimo})`;
+                        ul.appendChild(li);
+                    });
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Error cargando alertas:', err);
             }
         }
 
-        cargarInsumos();
+        async function cargarInsumos() {
+            try {
+                const res = await fetch(`${API_URL}/insumos`);
+                const insumos = await res.json();
+                const tbody = document.getElementById('tabla-insumos');
+                tbody.innerHTML = '';
+
+                insumos.forEach(i => {
+                    const esCritico = parseFloat(i.cantidad_actual) <= parseFloat(i.stock_minimo);
+                    const tr = document.createElement('tr');
+                    if (esCritico) tr.className = 'critical';
+
+                    tr.innerHTML = `
+                        <td>${i.id_insumo}</td>
+                        <td><strong>${i.nombre}</strong></td>
+                        <td>${i.cantidad_actual}</td>
+                        <td>
+                            <input type="number" id="min-${i.id_insumo}" value="${i.stock_minimo}" style="width: 70px;" step="0.01">
+                            <button onclick="actualizarMinimo(${i.id_insumo})">Set</button>
+                        </td>
+                        <td>
+                            <input type="number" id="add-${i.id_insumo}" placeholder="0.00" style="width: 70px;" step="0.01">
+                            <button onclick="agregarStock(${i.id_insumo})">+</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Error al cargar insumos:', err);
+            }
+        }
+
+        async function crearInsumo() {
+            const nombre = document.getElementById('insumo-nombre').value;
+            const cantidad = parseFloat(document.getElementById('insumo-cantidad').value) || 0;
+
+            if (!nombre) return alert('Ingresa un nombre de insumo');
+
+            try {
+                const res = await fetch(`${API_URL}/insumos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, cantidad_actual: cantidad })
+                });
+                if (res.ok) {
+                    document.getElementById('insumo-nombre').value = '';
+                    document.getElementById('insumo-cantidad').value = '';
+                    cargarTodo();
+                }
+            } catch (err) {
+                alert('Error al crear insumo');
+            }
+        }
+
+        async function agregarStock(id) {
+            const cantidad_agregar = parseFloat(document.getElementById(`add-${id}`).value);
+            if (isNaN(cantidad_agregar) || cantidad_agregar <= 0) return alert('Cantidad inválida');
+
+            try {
+                const res = await fetch(`${API_URL}/insumos/${id}/stock`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cantidad_agregar })
+                });
+                if (res.ok) cargarTodo();
+            } catch (err) {
+                alert('Error al actualizar stock');
+            }
+        }
+
+        async function actualizarMinimo(id) {
+            const stock_minimo = parseFloat(document.getElementById(`min-${id}`).value);
+            if (isNaN(stock_minimo)) return alert('Cantidad inválida');
+
+            try {
+                const res = await fetch(`${API_URL}/insumos/${id}/minimo`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stock_minimo })
+                });
+                if (res.ok) cargarTodo();
+            } catch (err) {
+                alert('Error al actualizar mínimo');
+            }
+        }
+
+        window.onload = cargarTodo;
     </script>
 </body>
 </html>

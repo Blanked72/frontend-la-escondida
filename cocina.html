@@ -2,56 +2,110 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cocina - Pendientes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Escondida - Cocina</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .grid { display: flex; flex-wrap: wrap; gap: 15px; }
-        .orden-card { border: 2px solid #ff9800; padding: 15px; border-radius: 8px; width: 250px; background: #fff3e0; }
-        button { background: #2196F3; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; }
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #1a252f; }
+        body { font-family: sans-serif; background-color: var(--bg); color: #ecf0f1; margin: 0; padding: 20px; }
+        header { text-align: center; margin-bottom: 20px; }
+        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        nav a { padding: 8px 12px; background: #34495e; color: white; text-decoration: none; border-radius: 4px; }
+        .grid-ordenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card-cocina { background: #2c3e50; border-radius: 8px; padding: 15px; border-left: 5px solid #f39c12; }
+        .card-cocina h3 { margin-top: 0; border-bottom: 1px solid #34495e; padding-bottom: 5px; }
+        .item-linea { display: flex; justify-content: space-between; padding: 5px 0; font-size: 1.1em; }
+        button { width: 100%; margin-top: 15px; padding: 10px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #219150; }
     </style>
 </head>
 <body>
-    <h2>👨‍🍳 Vista de Cocina</h2>
-    <div id="contenedor-cocina" class="grid"></div>
+    <header>
+        <h1>Pantalla de Cocina</h1>
+        <nav>
+            <a href="index.html">Tomar Orden</a>
+            <a href="cocina.html">Cocina</a>
+            <a href="caja.html">Caja</a>
+            <a href="inventario.html">Inventario</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
+
+    <div id="grid-cocina" class="grid-ordenes">Cargando órdenes de cocina...</div>
 
     <script>
-        const API_URL = 'https://tu-app-en-render.onrender.com/api';
+        const API_URL = 'http://localhost:3000/api';
 
         async function cargarCocina() {
-            const res = await fetch(`${API_URL}/ordenes`);
-            const ordenes = await res.json();
-            
-            const pendientes = ordenes.filter(o => o.estado === 'Pendiente');
-            const contenedor = document.getElementById('contenedor-cocina');
-            contenedor.innerHTML = '';
-
-            pendientes.forEach(o => {
-                let itemsHTML = '';
-                o.detalles.forEach(d => {
-                    itemsHTML += `<li>${d.cantidad}x ${d.producto} ${d.notas ? `<b>(${d.notas})</b>` : ''}</li>`;
+            try {
+                const res = await fetch(`${API_URL}/cocina`);
+                const items = await res.json();
+                
+                const ordenesMap = {};
+                items.forEach(item => {
+                    if (!ordenesMap[item.id_orden]) {
+                        ordenesMap[item.id_orden] = {
+                            numero_mesa: item.numero_mesa,
+                            productos: []
+                        };
+                    }
+                    ordenesMap[item.id_orden].productos.push(item);
                 });
 
-                contenedor.innerHTML += `
-                    <div class="orden-card">
-                        <h3>Mesa #${o.numero_mesa}</h3>
-                        <ul>${itemsHTML}</ul>
-                        <button onclick="marcarListo(${o.id_orden})">✅ Marcar como Listo</button>
-                    </div>
-                `;
-            });
+                const container = document.getElementById('grid-cocina');
+                container.innerHTML = '';
+
+                const ordenesIds = Object.keys(ordenesMap);
+                if (ordenesIds.length === 0) {
+                    container.innerHTML = '<h2>No hay órdenes pendientes en cocina 🎉</h2>';
+                    return;
+                }
+
+                ordenesIds.forEach(id_orden => {
+                    const orden = ordenesMap[id_orden];
+                    const div = document.createElement('div');
+                    div.className = 'card-cocina';
+                    
+                    let htmlProductos = '';
+                    orden.productos.forEach(prod => {
+                        htmlProductos += `
+                            <div class="item-linea">
+                                <span>${prod.nombre}</span>
+                                <strong>x${prod.cantidad}</strong>
+                            </div>
+                        `;
+                    });
+
+                    div.innerHTML = `
+                        <h3>Orden #${id_orden} - ${orden.numero_mesa}</h3>
+                        ${htmlProductos}
+                        <button onclick="marcarLista(${id_orden})">Marcar como Lista</button>
+                    `;
+                    container.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error('Error cargando cocina:', err);
+            }
         }
 
-        async function marcarListo(id) {
-            await fetch(`${API_URL}/ordenes/${id}/estado`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: 'Listo' })
-            });
+        async function marcarLista(id_orden) {
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id_orden}/lista`, { method: 'PUT' });
+                if (res.ok) {
+                    cargarCocina();
+                } else {
+                    alert('Error al actualizar el estado');
+                }
+            } catch (err) {
+                alert('Error de conexión');
+            }
+        }
+
+        window.onload = () => {
             cargarCocina();
-        }
-
-        setInterval(cargarCocina, 4000);
-        cargarCocina();
+            setInterval(cargarCocina, 10000);
+        };
     </script>
 </body>
 </html>
