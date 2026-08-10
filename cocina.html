@@ -9,7 +9,6 @@
         body { background-color: #1a1d20; color: #f8f9fa; font-family: system-ui; }
         .card-orden { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .header-pendiente { background-color: #ffc107; color: #000; font-weight: bold; border-radius: 12px 12px 0 0; }
-        .header-domicilio { background-color: #0d6efd; color: #fff; font-weight: bold; border-radius: 12px 12px 0 0; }
         .badge-cantidad { font-size: 1.2rem; min-width: 32px; }
         .item-comanda { font-size: 1.1rem; }
     </style>
@@ -21,9 +20,7 @@
             <button class="btn btn-warning fw-bold px-4" onclick="cargarCocina()">🔄 Actualizar</button>
         </div>
 
-        <div id="contenedor-ordenes" class="row g-4">
-            <!-- Comandas -->
-        </div>
+        <div id="contenedor-ordenes" class="row g-4"></div>
     </div>
 
     <script>
@@ -36,7 +33,7 @@
                 const contenedor = document.getElementById('contenedor-ordenes');
                 contenedor.innerHTML = '';
 
-                const pendientes = ordenes.filter(o => o.estado === 'Pendiente' || o.estado === 'A Domicilio');
+                const pendientes = ordenes.filter(o => o.estado === 'Pendiente');
 
                 if (pendientes.length === 0) {
                     contenedor.innerHTML = '<div class="col-12 text-center py-5"><h3 class="text-muted">No hay pedidos pendientes por preparar ✨</h3></div>';
@@ -44,15 +41,12 @@
                 }
 
                 pendientes.forEach(orden => {
-                    const esDomicilio = orden.estado === 'A Domicilio';
-                    const headerClass = esDomicilio ? 'header-domicilio' : 'header-pendiente';
-
                     let detallesHtml = '';
                     if (orden.detalles && orden.detalles.length > 0) {
                         detallesHtml = orden.detalles.map(d => `
                             <li class="list-group-item bg-dark text-white border-secondary d-flex align-items-center py-3 item-comanda">
                                 <span class="badge bg-warning text-dark badge-cantidad me-3">${d.cantidad}</span>
-                                <span>${d.producto || d.notas || 'Producto sin especificar'}</span>
+                                <span>${d.producto || d.notas || 'Producto'}</span>
                             </li>
                         `).join('');
                     }
@@ -60,9 +54,9 @@
                     contenedor.innerHTML += `
                         <div class="col-md-6 col-lg-4 col-xl-3">
                             <div class="card card-orden bg-secondary text-white h-100">
-                                <div class="card-header ${headerClass} d-flex justify-content-between align-items-center p-3">
+                                <div class="card-header header-pendiente d-flex justify-content-between align-items-center p-3">
                                     <span class="fs-4">${orden.numero_mesa}</span>
-                                    <span class="badge bg-dark">${orden.estado}</span>
+                                    <span class="badge bg-dark">Pendiente</span>
                                 </div>
                                 <div class="card-body p-0">
                                     <ul class="list-group list-group-flush">
@@ -92,7 +86,7 @@
             }
         }
 
-        setInterval(cargarCocina, 7000);
+        setInterval(cargarCocina, 4000);
         cargarCocina();
     </script>
 </body>

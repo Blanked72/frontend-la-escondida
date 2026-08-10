@@ -13,7 +13,6 @@
             <button class="btn btn-dark" onclick="cargarReportes()">🔄 Actualizar Reporte</button>
         </div>
 
-        <!-- Ventas de Hoy -->
         <div class="row g-3 mb-4">
             <div class="col-md-6">
                 <div class="card bg-success text-white shadow-sm">
@@ -33,7 +32,6 @@
             </div>
         </div>
 
-        <!-- Tabla Histórica de Días Anteriores -->
         <div class="card shadow-sm">
             <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0">Historial Diario de Cobros</h5>
@@ -50,7 +48,7 @@
                         </thead>
                         <tbody id="tabla-historial">
                             <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">Cargando historial de días anteriores...</td>
+                                <td colspan="3" class="text-center py-4 text-muted">Cargando historial...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -64,14 +62,12 @@
 
         async function cargarReportes() {
             try {
-                // 1. Obtener métricas de hoy
                 const resHoy = await fetch(`${API_URL}/reportes/ventas/hoy`);
                 const dataHoy = await resHoy.json();
 
                 document.getElementById('ventas-hoy').innerText = parseFloat(dataHoy.total_vendido || 0).toFixed(2);
                 document.getElementById('ordenes-hoy').innerText = dataHoy.total_ordenes || 0;
 
-                // 2. Obtener historial acumulado por días anteriores
                 const resHistorial = await fetch(`${API_URL}/reportes/ventas/historial`);
                 const historial = await resHistorial.json();
 
@@ -84,7 +80,6 @@
                 }
 
                 historial.forEach(row => {
-                    // Limpieza del string de fecha recibido del servidor
                     const fechaLimpia = row.fecha ? row.fecha.split('T')[0] : 'Fecha no registrada';
 
                     tbody.innerHTML += `

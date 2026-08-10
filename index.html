@@ -18,12 +18,11 @@
     <div class="hero-banner text-center mb-4">
         <h1 class="fw-bold mb-1">🌮 La Escondida</h1>
         <p class="mb-2 opacity-75">Selecciona tus platillos y envía tu pedido directo a cocina</p>
-        <span class="badge badge-mesa" id="etiqueta-mesa">Mesa Detectada: Carga...</span>
+        <span class="badge badge-mesa" id="etiqueta-mesa">📍 Cargando Mesa...</span>
     </div>
 
     <div class="container pb-5">
         <div class="row g-4">
-            <!-- Catalogo de Platillos -->
             <div class="col-lg-8">
                 <h4 class="fw-bold mb-3">Menú Principal</h4>
                 <div class="row g-3" id="lista-productos">
@@ -31,7 +30,6 @@
                 </div>
             </div>
 
-            <!-- Resumen del Pedido -->
             <div class="col-lg-4">
                 <div class="card card-prod sticky-top" style="top: 20px;">
                     <div class="card-body p-4">
@@ -54,10 +52,8 @@
         const API_URL = 'https://backend-la-escondida.onrender.com/api';
         let carrito = [];
         
-        // Obtener la mesa de la URL (Ej: index.html?mesa=5) o asigna Mesa 1 por defecto
         const urlParams = new URLSearchParams(window.location.search);
         const numeroMesa = urlParams.get('mesa') ? `Mesa ${urlParams.get('mesa')}` : 'Mesa 1';
-        
         document.getElementById('etiqueta-mesa').innerText = `📍 ${numeroMesa}`;
 
         async function cargarMenu() {
@@ -140,7 +136,6 @@
 
         async function enviarPedido() {
             if (carrito.length === 0) return alert('Selecciona al menos un producto');
-
             const total = parseFloat(document.getElementById('carrito-total').innerText);
 
             try {
@@ -151,11 +146,11 @@
                 });
 
                 if (res.ok) {
-                    alert(`¡Orden enviada a cocina para la ${numeroMesa}!`);
+                    alert(`¡Orden enviada a cocina para ${numeroMesa}!`);
                     carrito = [];
                     renderizarCarrito();
                 } else {
-                    alert('Error al enviar orden');
+                    alert('Error al enviar la orden');
                 }
             } catch (err) {
                 console.error(err);
