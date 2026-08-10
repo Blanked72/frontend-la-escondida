@@ -33,8 +33,9 @@
         
         .btn-enviar { background-color: #27ae60; color: white; border: none; padding: 15px; border-radius: 5px; font-size: 1.2rem; font-weight: bold; cursor: pointer; text-transform: uppercase; }
         .btn-enviar:hover { background-color: #219150; }
+        .btn-enviar:disabled { background-color: #7f8c8d; cursor: not-allowed; }
         
-        #domicilio-extra { display: none; } /* Oculto por defecto */
+        #domicilio-extra { display: none; }
 
         /* Mensaje de Éxito */
         #pantalla-exito { display: none; text-align: center; padding: 40px 20px; }
@@ -88,7 +89,6 @@
                     <input type="tel" id="cliente-telefono" placeholder="Ej. 555 123 4567">
                 </div>
 
-                <!-- Esto solo se muestra si eligen domicilio -->
                 <div id="domicilio-extra">
                     <div class="form-group">
                         <label>Dirección Completa de Envío</label>
@@ -96,7 +96,7 @@
                     </div>
                 </div>
 
-                <button class="btn-enviar" onclick="enviarPedidoEnLinea()">Enviar mi Pedido 🚀</button>
+                <button class="btn-enviar" id="btn-submit" onclick="enviarPedidoEnLinea()">Enviar mi Pedido 🚀</button>
             </div>
         </div>
     </div>
@@ -113,7 +113,6 @@
         const API = 'https://backend-la-escondida.onrender.com/api';
         let carrito = [];
 
-        // Iniciar la página cargando los productos
         cargarMenu();
 
         async function cargarMenu() {
@@ -141,13 +140,12 @@
         }
 
         function agregarAlCarrito(id, nombre, precio) {
-            // Buscamos si ya existe el producto en el carrito
             let productoExistente = carrito.find(item => item.id_producto === id);
             
             if (productoExistente) {
                 productoExistente.cantidad += 1;
             } else {
-                carrito.push({ id_producto: id, nombre: nombre, precio: parseFloat(precio), cantidad: 1 });
+                carrito.push({ id_producto: parseInt(id), nombre: nombre, precio: parseFloat(precio), cantidad: 1 });
             }
             actualizarInterfazCarrito();
         }
@@ -188,7 +186,6 @@
             document.getElementById('total-precio').innerText = total.toFixed(2);
         }
 
-        // Mostrar u ocultar el campo de dirección
         function cambiarTipoPedido() {
             const tipo = document.getElementById('tipo-pedido').value;
             const cajaDireccion = document.getElementById('domicilio-extra');
@@ -221,7 +218,6 @@
                 return;
             }
 
-            // ARMAMOS LA "MESA" FALSIFICADA PARA QUE EL MESERO SEPA QUÉ ES
             let identificadorEspecial = '';
             if (tipo === 'domicilio') {
                 identificadorEspecial = `🛵 DOMICILIO | ${nombre} | Tel: ${telefono} | Dir: ${direccion}`;
@@ -231,11 +227,23 @@
 
             const totalCalculado = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
+            // Mapeo explicito garantizando id_producto, cantidad y precio_unitario
+            const detallesDetallados = carrito.map(item => ({
+                id_producto: item.id_producto,
+                cantidad: item.cantidad,
+                precio: item.precio,
+                nombre: item.nombre
+            }));
+
             const payload = {
-                mesa: identificadorEspecial,
+                numero_mesa: identificadorEspecial,
                 total: totalCalculado,
-                carrito: carrito
+                detalles: detallesDetallados
             };
+
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.innerText = 'PROCESANDO PEDIDO...';
 
             try {
                 const res = await fetch(`${API}/ordenes`, {
@@ -245,15 +253,17 @@
                 });
 
                 if (res.ok) {
-                    // Ocultamos la pantalla principal y mostramos el mensaje de éxito
                     document.getElementById('pantalla-principal').style.display = 'none';
                     document.getElementById('pantalla-exito').style.display = 'block';
-                    carrito = []; // Vaciamos carrito por seguridad
+                    carrito = [];
                 } else {
                     alert("Hubo un error al enviar tu pedido. Por favor, intenta llamarnos.");
                 }
             } catch (error) {
                 alert("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'ENVIAR MI PEDIDO 🚀';
             }
         }
     </script>

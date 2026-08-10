@@ -7,12 +7,14 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #ecf0f1; color: #2c3e50; margin: 0; padding: 1rem; }
         h1 { text-align: center; color: #2980b9; }
-        .grid-caja { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .grid-caja { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
         .ticket { background-color: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-left: 5px solid #2980b9; }
-        .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        .ticket.domicilio { border-left-color: #e67e22; }
+        .badge-domicilio { background-color: #e67e22; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .ticket h2 { margin: 0 0 10px 0; font-size: 1.1rem; }
         .total { font-size: 1.5rem; font-weight: bold; color: #c0392b; margin: 15px 0; }
-        .btn-cobrar { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
-        .btn-cobrar:hover { background-color: #2980b9; }
+        .btn-cobrar { background-color: #27ae60; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .btn-cobrar:hover { background-color: #219150; }
         .btn-cobrar:disabled { background-color: #95a5a6; cursor: not-allowed; }
     </style>
 </head>
@@ -24,7 +26,6 @@
     </div>
 
     <script>
-        // BANDERA STRICTA ANTI-DOBLE PROCESAMIENTO
         let procesandoPago = false;
 
         async function cargarOrdenesCaja() {
@@ -41,13 +42,18 @@
                 }
 
                 datos.forEach(orden => {
+                    const esDomicilio = orden.estado === 'A Domicilio' || isNaN(orden.numero_mesa);
                     const ticket = document.createElement('div');
-                    ticket.className = 'ticket';
+                    ticket.className = `ticket ${esDomicilio ? 'domicilio' : ''}`;
+                    
                     ticket.innerHTML = `
-                        <h2>Orden #${orden.id_orden} - Mesa ${orden.numero_mesa}</h2>
+                        <h2>
+                            Orden #${orden.id_orden} - ${orden.numero_mesa} 
+                            ${esDomicilio ? '<span class="badge-domicilio">🛵 En Línea</span>' : ''}
+                        </h2>
                         <div class="total">Total: $${orden.total}</div>
                         <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
-                            💵 Cobrar
+                            💵 Cobrar y Descontar Stock
                         </button>
                     `;
                     pantalla.appendChild(ticket);
@@ -58,16 +64,12 @@
         }
 
         async function cobrarOrden(event, id_orden, total) {
-            // Detener cualquier evento duplicado
             if (event) event.preventDefault();
-
-            // Si ya hay un cobro en curso, ignorar cualquier segundo clic
             if (procesandoPago) return;
 
-            const confirmar = confirm(`¿Confirmas el cobro de $${total} por la Orden #${id_orden}?`);
+            const confirmar = confirm(`¿Confirmas el cobro manual de $${total} para la Orden #${id_orden}?`);
             if (!confirmar) return;
 
-            // Bloqueo inmediato
             procesandoPago = true;
             const boton = document.getElementById(`btn-${id_orden}`);
             if (boton) {
@@ -83,23 +85,22 @@
                 const resultado = await respuesta.json();
                 
                 if (respuesta.ok) {
-                    alert(resultado.mensaje || "Cobro procesado correctamente.");
+                    alert(resultado.mensaje || "Cobro procesado e inventario descontado correctamente.");
                     await cargarOrdenesCaja();
                 } else {
                     alert(`El servidor falló al cobrar: ${resultado.error || 'Error desconocido'}`);
                     if (boton) {
                         boton.disabled = false;
-                        boton.innerText = "💵 Cobrar";
+                        boton.innerText = "💵 Cobrar y Descontar Stock";
                     }
                 }
             } catch (error) {
                 alert("Hubo un error de red al procesar el pago. Verifica tu conexión.");
                 if (boton) {
                     boton.disabled = false;
-                    boton.innerText = "💵 Cobrar";
+                    boton.innerText = "💵 Cobrar y Descontar Stock";
                 }
             } finally {
-                // Liberar bandera
                 procesandoPago = false;
             }
         }
