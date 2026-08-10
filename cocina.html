@@ -3,91 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Cocina</title>
+    <title>La Escondida - Cocina</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #1e1e2f; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar { background-color: #11111d; }
-        .card-orden { border: 2px solid #333; background-color: #27293d; border-radius: 12px; }
-        .card-header-cocina { background-color: #e14eca; color: white; border-top-left-radius: 10px !important; border-top-right-radius: 10px !important; }
-        .list-group-item { background-color: #1e1e2f; color: #fff; border-color: #333; }
+        body { background-color: #f8f9fa; }
+        .card-orden { border-left: 5px solid #ffc107; }
+        .card-domicilio { border-left: 5px solid #0d6efd; }
     </style>
 </head>
-<body>
-
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1"><i class="bi-fire me-2"></i>Monitor de Cocina - Preparación</span>
-            <button class="btn btn-outline-light btn-sm" onclick="cargarCocina()"><i class="bi bi-arrow-clockwise me-1"></i>Refrescar</button>
+<body class="p-4">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Comandos de Cocina</h2>
+            <button class="btn btn-outline-secondary" onclick="cargarCocina()">Actualizar Manualmente</button>
         </div>
-    </nav>
 
-    <div class="container-fluid px-4">
-        <div id="contenedor-cocina" class="row g-4">
-            <!-- Carga de comandas activas -->
+        <div id="contenedor-ordenes" class="row g-3">
+            <!-- Las órdenes se cargarán dinámicamente aquí -->
         </div>
     </div>
 
     <script>
+        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+
         async function cargarCocina() {
             try {
-                const response = await fetch('/api/ordenes');
+                const response = await fetch(`${API_URL}/ordenes`);
                 const ordenes = await response.json();
                 
-                const contenedor = document.getElementById('contenedor-cocina');
+                const contenedor = document.getElementById('contenedor-ordenes');
                 contenedor.innerHTML = '';
 
-                // Muestra tanto los pedidos presenciales como en línea pendientes por preparar
-                const ordenesParaPreparar = ordenes.filter(o => o.estado === 'Pendiente' || o.estado === 'A Domicilio');
+                // Filtrar solo las órdenes pendientes o a domicilio
+                const pendientes = ordenes.filter(o => o.estado === 'Pendiente' || o.estado === 'A Domicilio');
 
-                if (ordenesParaPreparar.length === 0) {
-                    contenedor.innerHTML = `
-                        <div class="col-12 text-center py-5">
-                            <i class="bi bi-emoji-smile text-success display-1"></i>
-                            <h3 class="mt-3 text-muted">Sin comandas pendientes en cocina</h3>
-                        </div>`;
+                if (pendientes.length === 0) {
+                    contenedor.innerHTML = '<div class="col-12"><div class="alert alert-info text-center">No hay órdenes pendientes en cocina.</div></div>';
                     return;
                 }
 
-                ordenesParaPreparar.forEach(orden => {
-                    let productosHTML = '';
+                pendientes.forEach(orden => {
+                    const esDomicilio = orden.estado === 'A Domicilio';
+                    const tarjetaClass = esDomicilio ? 'card-domicilio' : 'card-orden';
+                    
+                    let detallesHtml = '';
                     if (orden.detalles && orden.detalles.length > 0) {
-                        productosHTML = orden.detalles.map(d => `
-                            <li class="list-group-item d-flex justify-content-between align-items-center fs-5">
-                                <div>
-                                    <span class="fw-bold text-warning">${d.cantidad}x</span> ${d.producto || d.notas || 'Producto'}
-                                </div>
+                        detallesHtml = orden.detalles.map(d => `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>${d.cantidad}x</strong> ${d.producto || d.notas || 'Producto'}</span>
                             </li>
                         `).join('');
+                    } else {
+                        detallesHtml = '<li class="list-group-item text-muted">Sin detalles especificados</li>';
                     }
 
-                    const card = `
-                        <div class="col-md-4 col-lg-3">
-                            <div class="card card-orden h-100">
-                                <div class="card-header card-header-cocina d-flex justify-content-between align-items-center fw-bold fs-5">
-                                    <span>Mesa: ${orden.numero_mesa}</span>
-                                    <span>#${orden.id_orden}</span>
+                    contenedor.innerHTML += `
+                        <div class="col-md-4">
+                            <div class="card shadow-sm ${tarjetaClass}">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">${orden.numero_mesa}</h5>
+                                    <span class="badge ${esDomicilio ? 'bg-primary' : 'bg-warning text-dark'}">${orden.estado}</span>
                                 </div>
                                 <div class="card-body">
-                                    <div class="text-muted mb-2">
-                                        Hora: ${new Date(orden.fecha).toLocaleTimeString()}
-                                    </div>
                                     <ul class="list-group list-group-flush mb-3">
-                                        ${productosHTML}
+                                        ${detallesHtml}
                                     </ul>
-                                </div>
-                                <div class="card-footer bg-transparent border-0 pb-3">
-                                    <button class="btn btn-success btn-lg w-100 fw-bold" onclick="marcarEntregado(${orden.id_orden})">
-                                        <i class="bi bi-check2-circle me-1"></i>Marcar Entregado
+                                    <button class="btn btn-success w-100" onclick="marcarEntregado(${orden.id_orden})">
+                                        Marcar como Listo / Entregado
                                     </button>
                                 </div>
                             </div>
                         </div>
                     `;
-                    contenedor.innerHTML += card;
                 });
-
             } catch (error) {
                 console.error('Error al cargar órdenes de cocina:', error);
             }
@@ -95,18 +83,23 @@
 
         async function marcarEntregado(id) {
             try {
-                const response = await fetch(`/api/ordenes/${id}/entregar`, { method: 'PUT' });
+                const response = await fetch(`${API_URL}/ordenes/${id}/entregar`, {
+                    method: 'PUT'
+                });
                 if (response.ok) {
                     cargarCocina();
                 } else {
-                    alert('Error al cambiar el estado de la orden');
+                    alert('Error al actualizar la orden');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error al entregar orden:', error);
             }
         }
 
-        setInterval(cargarCocina, 5000);
+        // Auto-refresco cada 10 segundos
+        setInterval(cargarCocina, 10000);
+        
+        // Carga inicial
         cargarCocina();
     </script>
 </body>
