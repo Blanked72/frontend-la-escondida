@@ -2,85 +2,61 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Caja y Cobros</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Caja - Cobro de Órdenes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #333; color: white; }
+        button { background: #9c27b0; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    </style>
 </head>
-<body class="bg-light p-4">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>💵 Módulo de Caja (Pendientes de Cobro)</h2>
-            <button class="btn btn-outline-success" onclick="cargarCaja()">🔄 Actualizar</button>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th># Orden</th>
-                                <th>Mesa</th>
-                                <th>Total a Cobrar</th>
-                                <th>Estado</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-caja">
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Cargando cuentas listas...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+<body>
+    <h2>💵 Módulo de Caja</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>N° Orden</th>
+                <th>Mesa</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-caja"></tbody>
+    </table>
 
     <script>
-        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+        const API_URL = 'https://tu-app-en-render.onrender.com/api';
 
         async function cargarCaja() {
-            try {
-                const res = await fetch(`${API_URL}/caja`);
-                const ordenes = await res.json();
+            const res = await fetch(`${API_URL}/ordenes`);
+            const ordenes = await res.json();
+            
+            const paraCobrar = ordenes.filter(o => o.estado === 'Entregado');
+            const tbody = document.getElementById('tabla-caja');
+            tbody.innerHTML = '';
 
-                const tbody = document.getElementById('tabla-caja');
-                tbody.innerHTML = '';
-
-                if (!Array.isArray(ordenes) || ordenes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay cuentas por cobrar en este momento.</td></tr>';
-                    return;
-                }
-
-                ordenes.forEach(o => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="fw-bold">#${o.id_orden}</td>
-                            <td class="fs-5 fw-bold">${o.numero_mesa}</td>
-                            <td class="fw-bold text-success fs-5">$${parseFloat(o.total).toFixed(2)}</td>
-                            <td><span class="badge bg-info text-dark px-3 py-2">${o.estado}</span></td>
-                            <td>
-                                <button class="btn btn-success fw-bold px-4" onclick="cobrarOrden(${o.id_orden})">
-                                    💵 Cobrar y Finalizar
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (error) {
-                console.error('Error al cargar caja:', error);
-            }
+            paraCobrar.forEach(o => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${o.id_orden}</td>
+                        <td>Mesa ${o.numero_mesa}</td>
+                        <td>$${parseFloat(o.total).toFixed(2)}</td>
+                        <td><b style="color:green;">${o.estado}</b></td>
+                        <td><button onclick="cobrar(${o.id_orden})">💳 Cobrar y Finalizar</button></td>
+                    </tr>
+                `;
+            });
         }
 
-        async function cobrarOrden(id) {
-            if (!confirm('¿Confirmas que la cuenta ha sido cobrada?')) return;
-            try {
-                const res = await fetch(`${API_URL}/ordenes/${id}/pagar`, { method: 'PUT' });
-                if (res.ok) cargarCaja();
-            } catch (error) {
-                console.error('Error al cobrar orden:', error);
-            }
+        async function cobrar(id) {
+            await fetch(`${API_URL}/ordenes/${id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: 'Pagado' })
+            });
+            cargarCaja();
         }
 
         setInterval(cargarCaja, 5000);

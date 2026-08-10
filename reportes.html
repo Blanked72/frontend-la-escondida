@@ -2,100 +2,68 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Reporte de Ventas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Reportes de Ventas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .resumen { display: flex; gap: 20px; margin-bottom: 20px; }
+        .box { padding: 20px; border-radius: 8px; background: #e3f2fd; flex: 1; text-align: center; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #0d47a1; color: white; }
+    </style>
 </head>
-<body class="bg-light p-4">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>📈 Reporte Histórico de Ventas</h2>
-            <button class="btn btn-dark" onclick="cargarReportes()">🔄 Actualizar Reporte</button>
-        </div>
+<body>
+    <h2>📊 Ventas Diarias</h2>
 
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card bg-success text-white shadow-sm">
-                    <div class="card-body p-4">
-                        <h5 class="card-title">Ventas acumuladas hoy</h5>
-                        <h2 class="display-5 fw-bold mb-0">$<span id="ventas-hoy">0.00</span></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card bg-primary text-white shadow-sm">
-                    <div class="card-body p-4">
-                        <h5 class="card-title">Órdenes cobradas hoy</h5>
-                        <h2 class="display-5 fw-bold mb-0"><span id="ordenes-hoy">0</span></h2>
-                    </div>
-                </div>
-            </div>
+    <div class="resumen">
+        <div class="box">
+            <h3>Órdenes Cobradas</h3>
+            <h1 id="total-ordenes">0</h1>
         </div>
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0">Historial Diario de Cobros</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Fecha (Año-Mes-Día)</th>
-                                <th>Total de Órdenes Cobradas</th>
-                                <th>Monto Total Ingresado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-historial">
-                            <tr>
-                                <td colspan="3" class="text-center py-4 text-muted">Cargando historial...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="box" style="background:#e8f5e9;">
+            <h3>Total Generado</h3>
+            <h1 id="total-dinero">$0.00</h1>
         </div>
     </div>
 
+    <h3>Historial de Ventas</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>N° Orden</th>
+                <th>Mesa</th>
+                <th>Total</th>
+                <th>Fecha/Hora</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-reporte"></tbody>
+    </table>
+
     <script>
-        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+        const API_URL = 'https://tu-app-en-render.onrender.com/api';
 
-        async function cargarReportes() {
-            try {
-                const resHoy = await fetch(`${API_URL}/reportes/ventas/hoy`);
-                const dataHoy = await resHoy.json();
+        async function cargarReporte() {
+            const res = await fetch(`${API_URL}/reportes/ventas`);
+            const data = await res.json();
 
-                document.getElementById('ventas-hoy').innerText = parseFloat(dataHoy.total_vendido || 0).toFixed(2);
-                document.getElementById('ordenes-hoy').innerText = dataHoy.total_ordenes || 0;
+            document.getElementById('total-ordenes').innerText = data.resumen.ordenes_totales;
+            document.getElementById('total-dinero').innerText = `$${parseFloat(data.resumen.total_ventas).toFixed(2)}`;
 
-                const resHistorial = await fetch(`${API_URL}/reportes/ventas/historial`);
-                const historial = await resHistorial.json();
-
-                const tbody = document.getElementById('tabla-historial');
-                tbody.innerHTML = '';
-
-                if (!Array.isArray(historial) || historial.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">No existen registros de cobros antiguos.</td></tr>';
-                    return;
-                }
-
-                historial.forEach(row => {
-                    const fechaLimpia = row.fecha ? row.fecha.split('T')[0] : 'Fecha no registrada';
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="fw-bold fs-6">${fechaLimpia}</td>
-                            <td><span class="badge bg-dark px-3 py-2">${row.total_ordenes} órdenes</span></td>
-                            <td class="fw-bold text-success fs-5">$${parseFloat(row.total_vendido).toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
-            } catch (error) {
-                console.error('Error al obtener reportes:', error);
-            }
+            const tbody = document.getElementById('tabla-reporte');
+            tbody.innerHTML = '';
+            data.historial.forEach(h => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${h.id_orden}</td>
+                        <td>Mesa ${h.numero_mesa}</td>
+                        <td>$${parseFloat(h.total).toFixed(2)}</td>
+                        <td>${new Date(h.fecha_creacion).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
         }
 
-        cargarReportes();
+        cargarReporte();
     </script>
 </body>
 </html>

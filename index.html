@@ -2,162 +2,103 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Menú</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Menú de Pedidos</title>
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .hero-banner { background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 2rem 1rem; border-radius: 0 0 20px 20px; }
-        .card-prod { border: none; border-radius: 15px; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .card-prod:hover { transform: translateY(-3px); }
-        .btn-add { border-radius: 20px; font-weight: 600; }
-        .badge-mesa { background-color: #3b82f6; font-size: 0.9rem; padding: 0.5em 0.8em; border-radius: 8px; }
+        body { font-family: Arial, sans-serif; margin: 20px; display: flex; gap: 20px; }
+        .productos { flex: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .card { border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
+        .carrito { flex: 1; border: 1px solid #333; padding: 15px; border-radius: 8px; background: #f9f9f9; }
+        button { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="hero-banner text-center mb-4">
-        <h1 class="fw-bold mb-1">🌮 La Escondida</h1>
-        <p class="mb-2 opacity-75">Selecciona tus platillos y envía tu pedido directo a cocina</p>
-        <span class="badge badge-mesa" id="etiqueta-mesa">📍 Cargando Mesa...</span>
+    <div>
+        <h2>Menú de Productos</h2>
+        <div id="contenedor-productos" class="productos"></div>
     </div>
 
-    <div class="container pb-5">
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <h4 class="fw-bold mb-3">Menú Principal</h4>
-                <div class="row g-3" id="lista-productos">
-                    <div class="col-12 text-center text-muted py-5">Cargando platillos...</div>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="card card-prod sticky-top" style="top: 20px;">
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Tu Pedido</h5>
-                        <ul class="list-group list-group-flush mb-3" id="carrito-lista">
-                            <li class="list-group-item text-center text-muted border-0 py-4">Tu carrito está vacío</li>
-                        </ul>
-                        <div class="d-flex justify-content-between fs-4 fw-bold border-top pt-3 mb-4">
-                            <span>Total</span>
-                            <span class="text-success">$<span id="carrito-total">0.00</span></span>
-                        </div>
-                        <button class="btn btn-primary w-100 btn-lg rounded-pill fw-bold" onclick="enviarPedido()">Enviar Orden</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="carrito">
+        <h2>Mi Pedido</h2>
+        <label>Número de Mesa:</label>
+        <input type="number" id="numero-mesa" min="1" placeholder="Ej. 5" style="width: 100%; margin-bottom: 10px;">
+        <ul id="lista-carrito"></ul>
+        <h3>Total: $<span id="total-pedido">0.00</span></h3>
+        <button onclick="enviarPedido()" style="width: 100%;">🚀 Enviar a Cocina</button>
     </div>
 
     <script>
-        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+        const API_URL = 'https://tu-app-en-render.onrender.com/api'; // Reemplazar por tu URL
         let carrito = [];
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const numeroMesa = urlParams.get('mesa') ? `Mesa ${urlParams.get('mesa')}` : 'Mesa 1';
-        document.getElementById('etiqueta-mesa').innerText = `📍 ${numeroMesa}`;
 
-        async function cargarMenu() {
-            try {
-                const res = await fetch(`${API_URL}/productos`);
-                const productos = await res.json();
-                const contenedor = document.getElementById('lista-productos');
-                contenedor.innerHTML = '';
+        async function cargarProductos() {
+            const res = await fetch(`${API_URL}/productos`);
+            const productos = await res.json();
+            const contenedor = document.getElementById('contenedor-productos');
+            contenedor.innerHTML = '';
 
-                productos.forEach(prod => {
-                    contenedor.innerHTML += `
-                        <div class="col-md-6">
-                            <div class="card card-prod h-100 p-2">
-                                <div class="card-body d-flex flex-column justify-content-between">
-                                    <div>
-                                        <h5 class="fw-bold text-dark mb-1">${prod.nombre}</h5>
-                                        <p class="text-success fw-bold fs-5 mb-2">$${parseFloat(prod.precio).toFixed(2)}</p>
-                                    </div>
-                                    <button class="btn btn-outline-primary btn-add w-100 mt-2" onclick="agregarProducto(${prod.id_producto}, '${prod.nombre}', ${prod.precio})">
-                                        + Agregar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                console.error(err);
-                document.getElementById('lista-productos').innerHTML = '<div class="alert alert-danger">Error al conectar con la base de datos.</div>';
-            }
+            productos.forEach(p => {
+                contenedor.innerHTML += `
+                    <div class="card">
+                        <h3>${p.nombre}</h3>
+                        <p>$${parseFloat(p.precio).toFixed(2)}</p>
+                        <input type="text" id="nota-${p.id_producto}" placeholder="Notas (ej. sin cebolla)">
+                        <button onclick="agregar(${p.id_producto}, '${p.nombre}', ${p.precio})">Agregar</button>
+                    </div>
+                `;
+            });
         }
 
-        function agregarProducto(id, nombre, precio) {
-            const existe = carrito.find(p => p.id_producto === id);
-            if (existe) {
-                existe.cantidad++;
-            } else {
-                carrito.push({ id_producto: id, nombre, precio, cantidad: 1 });
-            }
-            renderizarCarrito();
+        function agregar(id, nombre, precio) {
+            const nota = document.getElementById(`nota-${id}`).value;
+            carrito.push({ id_producto: id, nombre, precio_unitario: precio, cantidad: 1, notas: nota });
+            document.getElementById(`nota-${id}`).value = '';
+            renderCarrito();
         }
 
-        function renderizarCarrito() {
-            const lista = document.getElementById('carrito-lista');
-            const totalElemento = document.getElementById('carrito-total');
-            
-            if (carrito.length === 0) {
-                lista.innerHTML = '<li class="list-group-item text-center text-muted border-0 py-4">Tu carrito está vacío</li>';
-                totalElemento.innerText = '0.00';
-                return;
-            }
-
+        function renderCarrito() {
+            const lista = document.getElementById('lista-carrito');
             lista.innerHTML = '';
             let total = 0;
 
             carrito.forEach((item, index) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
+                total += item.precio_unitario * item.cantidad;
                 lista.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 mb-2">
-                        <div>
-                            <div class="fw-bold">${item.nombre}</div>
-                            <small class="text-muted">$${item.precio} x ${item.cantidad}</small>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <span class="fw-bold me-2">$${subtotal.toFixed(2)}</span>
-                            <button class="btn btn-sm btn-light text-danger" onclick="eliminarDelCarrito(${index})">✕</button>
-                        </div>
+                    <li>
+                        ${item.nombre} - $${item.precio_unitario} 
+                        ${item.notas ? `<small>(${item.notas})</small>` : ''}
+                        <button onclick="eliminar(${index})" style="background:red; padding:2px 5px;">X</button>
                     </li>
                 `;
             });
-
-            totalElemento.innerText = total.toFixed(2);
+            document.getElementById('total-pedido').innerText = total.toFixed(2);
         }
 
-        function eliminarDelCarrito(index) {
+        function eliminar(index) {
             carrito.splice(index, 1);
-            renderizarCarrito();
+            renderCarrito();
         }
 
         async function enviarPedido() {
-            if (carrito.length === 0) return alert('Selecciona al menos un producto');
-            const total = parseFloat(document.getElementById('carrito-total').innerText);
+            const mesa = document.getElementById('numero-mesa').value;
+            if (!mesa || carrito.length === 0) return alert('Ingresa la mesa y selecciona productos');
 
-            try {
-                const res = await fetch(`${API_URL}/ordenes`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero_mesa: numeroMesa, detalles: carrito, total })
-                });
+            const total = carrito.reduce((sum, i) => sum + i.precio_unitario, 0);
 
-                if (res.ok) {
-                    alert(`¡Orden enviada a cocina para ${numeroMesa}!`);
-                    carrito = [];
-                    renderizarCarrito();
-                } else {
-                    alert('Error al enviar la orden');
-                }
-            } catch (err) {
-                console.error(err);
+            const res = await fetch(`${API_URL}/ordenes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numero_mesa: mesa, detalles: carrito, total })
+            });
+
+            if (res.ok) {
+                alert('✅ Pedido enviado a cocina (Insumos descontados)');
+                carrito = [];
+                document.getElementById('numero-mesa').value = '';
+                renderCarrito();
             }
         }
 
-        cargarMenu();
+        cargarProductos();
     </script>
 </body>
 </html>

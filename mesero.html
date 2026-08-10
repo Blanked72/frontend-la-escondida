@@ -2,96 +2,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Control de Meseros</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Mesero - Listos para Servir</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 15px; }
+        .orden-card { border: 2px solid #4CAF50; padding: 15px; border-radius: 8px; width: 250px; background: #e8f5e9; }
+        button { background: #4CAF50; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; }
+    </style>
 </head>
-<body class="bg-light p-4">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>📋 Monitoreo de Órdenes en Tiempo Real</h2>
-            <button class="btn btn-outline-primary" onclick="cargarOrdenes()">🔄 Refrescar</button>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th># Orden</th>
-                                <th>Mesa / Identificador</th>
-                                <th>Productos Solicitados</th>
-                                <th>Total</th>
-                                <th>Estado Actual</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-ordenes-activas">
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Cargando órdenes del sistema...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+<body>
+    <h2>🔔 Vista de Mesero</h2>
+    <div id="contenedor-mesero" class="grid"></div>
 
     <script>
-        const API_URL = 'https://backend-la-escondida.onrender.com/api';
+        const API_URL = 'https://tu-app-en-render.onrender.com/api';
 
-        async function cargarOrdenes() {
-            try {
-                const res = await fetch(`${API_URL}/ordenes`);
-                const ordenes = await res.json();
+        async function cargarMesero() {
+            const res = await fetch(`${API_URL}/ordenes`);
+            const ordenes = await res.json();
+            
+            const listos = ordenes.filter(o => o.estado === 'Listo');
+            const contenedor = document.getElementById('contenedor-mesero');
+            contenedor.innerHTML = '';
 
-                const tbody = document.getElementById('tabla-ordenes-activas');
-                tbody.innerHTML = '';
-
-                if (!Array.isArray(ordenes) || ordenes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No hay órdenes registradas.</td></tr>';
-                    return;
-                }
-
-                ordenes.forEach(o => {
-                    let itemsStr = '';
-                    if (o.detalles && o.detalles.length > 0) {
-                        itemsStr = o.detalles.map(d => `${d.cantidad}x ${d.producto || d.notas || 'Producto'}`).join(', ');
-                    } else {
-                        itemsStr = 'Sin detalles';
-                    }
-
-                    let badgeColor = 'bg-secondary';
-                    let estadoTexto = o.estado;
-
-                    if (o.estado === 'Pendiente') {
-                        badgeColor = 'bg-warning text-dark';
-                        estadoTexto = 'En Cocina';
-                    } else if (o.estado === 'Entregado') {
-                        badgeColor = 'bg-info text-dark';
-                        estadoTexto = 'Listo / En Caja';
-                    } else if (o.estado === 'Pagado') {
-                        badgeColor = 'bg-success';
-                        estadoTexto = 'Pagado';
-                    }
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="fw-bold">#${o.id_orden}</td>
-                            <td class="fs-5 fw-bold">${o.numero_mesa}</td>
-                            <td><small class="text-dark">${itemsStr}</small></td>
-                            <td class="fw-bold">$${parseFloat(o.total).toFixed(2)}</td>
-                            <td><span class="badge ${badgeColor} px-3 py-2">${estadoTexto}</span></td>
-                        </tr>
-                    `;
+            listos.forEach(o => {
+                let itemsHTML = '';
+                o.detalles.forEach(d => {
+                    itemsHTML += `<li>${d.cantidad}x ${d.producto}</li>`;
                 });
-            } catch (error) {
-                console.error('Error al cargar órdenes:', error);
-            }
+
+                contenedor.innerHTML += `
+                    <div class="orden-card">
+                        <h3>🔔 Llevar a Mesa #${o.numero_mesa}!</h3>
+                        <ul>${itemsHTML}</ul>
+                        <button onclick="marcarEntregado(${o.id_orden})">🏃 Entregado en Mesa</button>
+                    </div>
+                `;
+            });
         }
 
-        setInterval(cargarOrdenes, 4000);
-        cargarOrdenes();
+        async function marcarEntregado(id) {
+            await fetch(`${API_URL}/ordenes/${id}/estado`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: 'Entregado' })
+            });
+            cargarMesero();
+        }
+
+        setInterval(cargarMesero, 4000);
+        cargarMesero();
     </script>
 </body>
 </html>
