@@ -3,104 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Ventas - La Escondida</title>
+    <title>Inventario - La Escondida</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 2rem; }
-        h1, h2 { text-align: center; color: #2c3e50; }
-        .dashboard { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
-        .tarjeta-metrica { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; min-width: 250px; border-top: 5px solid #27ae60; }
-        .tarjeta-metrica.ordenes { border-top-color: #8e44ad; }
-        .tarjeta-metrica h3 { margin: 0 0 10px 0; color: #7f8c8d; font-size: 1.2rem; }
-        .numero { font-size: 3rem; font-weight: bold; color: #2c3e50; margin: 0; }
-        .btn-actualizar { display: block; margin: 2rem auto; background-color: #34495e; color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 5px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 2rem; }
+        h1 { text-align: center; color: #2c3e50; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 5px solid #3498db; text-align: center; }
+        .card h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.3rem; }
+        .cantidad { font-size: 2.5rem; font-weight: bold; color: #e67e22; margin: 10px 0; }
+        .btn-actualizar { display: block; margin: 3rem auto 0; background-color: #34495e; color: white; border: none; padding: 12px 25px; font-size: 1.1rem; border-radius: 5px; cursor: pointer; }
         .btn-actualizar:hover { background-color: #2c3e50; }
-        
-        /* Estilos para el Historial de Días */
-        .seccion-historial { max-width: 800px; margin: 3rem auto 0; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
-        th { background-color: #2c3e50; color: white; }
-        tr:nth-child(even) { background-color: #f8f9fa; }
     </style>
 </head>
 <body>
 
-    <h1>📊 Resumen de Ventas del Día</h1>
+    <h1>📦 Stock e Inventario</h1>
     
-    <!-- TARJETAS DEL DÍA ACTUAL -->
-    <div class="dashboard">
-        <div class="tarjeta-metrica">
-            <h3>Ingresos Totales Hoy</h3>
-            <p class="numero">$<span id="total-vendido">0.00</span></p>
-        </div>
-        
-        <div class="tarjeta-metrica ordenes">
-            <h3>Órdenes Cobradas Hoy</h3>
-            <p class="numero" id="total-ordenes">0</p>
-        </div>
+    <div id="grid-inventario" class="grid">
+        <p style="text-align: center; width: 100%; grid-column: 1 / -1;">Buscando insumos en la base de datos...</p>
     </div>
 
-    <button class="btn-actualizar" onclick="cargarReporte()">🔄 Actualizar Datos</button>
-
-    <!-- HISTORIAL DE DÍAS ANTERIORES -->
-    <div class="seccion-historial">
-        <h2>📅 Historial de Ventas por Día</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha (Año-Mes-Día)</th>
-                    <th>Órdenes Cobradas</th>
-                    <th>Total Vendido</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-historial">
-                <tr><td colspan="3">Cargando historial de ventas...</td></tr>
-            </tbody>
-        </table>
-    </div>
+    <button class="btn-actualizar" onclick="cargarInventario()">🔄 Actualizar Stock</button>
 
     <script>
-        const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
-
-        async function cargarReporte() {
+        async function cargarInventario() {
             try {
-                // 1. Cargar lo vendido el día de hoy
-                const respuestaHoy = await fetch(`${API_BASE}/hoy`);
-                const datosHoy = await respuestaHoy.json();
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/insumos');
+                const insumos = await respuesta.json();
                 
-                document.getElementById('total-vendido').innerText = parseFloat(datosHoy.total_vendido || 0).toFixed(2);
-                document.getElementById('total-ordenes').innerText = datosHoy.total_ordenes || 0;
+                const grid = document.getElementById('grid-inventario');
+                grid.innerHTML = ''; 
 
-                // 2. Cargar el historial acumulado por días
-                const respuestaHistorial = await fetch(`${API_BASE}/historial`);
-                const diasAnteriores = await respuestaHistorial.json();
-
-                const tbody = document.getElementById('tabla-historial');
-                tbody.innerHTML = '';
-
-                if (!Array.isArray(diasAnteriores) || diasAnteriores.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3">No hay ventas registradas en días anteriores.</td></tr>';
+                if(insumos.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; width: 100%; grid-column: 1 / -1;">No hay insumos registrados en la base de datos.</p>';
                     return;
                 }
 
-                diasAnteriores.forEach(dia => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${dia.fecha}</strong></td>
-                        <td>${dia.total_ordenes} orden(es)</td>
-                        <td><strong>$${parseFloat(dia.total_vendido).toFixed(2)}</strong></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                insumos.forEach(insumo => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // Aquí está la corrección: leemos "cantidad_actual" según tu base de datos
+                    const nombre = insumo.nombre || 'Insumo Desconocido';
+                    const cantidad = insumo.cantidad_actual || 0;
 
+                    card.innerHTML = `
+                        <h3>${nombre}</h3>
+                        <div class="cantidad">${cantidad}</div>
+                    `;
+                    grid.appendChild(card);
+                });
             } catch (error) {
-                console.error("Error al obtener reporte:", error);
-                alert("Ocurrió un error al cargar la información desde el servidor.");
+                console.error("Error al cargar inventario:", error);
+                document.getElementById('grid-inventario').innerHTML = '<p style="color:red; text-align:center; width: 100%; grid-column: 1 / -1;">Error al conectar con el servidor.</p>';
             }
         }
 
-        // Cargar reporte automáticamente al abrir la vista
-        cargarReporte();
+        // Cargar automáticamente al entrar a la página
+        cargarInventario();
     </script>
 </body>
 </html>
