@@ -3,109 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Cocina</title>
+    <title>Monitor de Cocina - La Escondida</title>
     <style>
-        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #1a252f; }
-        body { font-family: sans-serif; background-color: var(--bg); color: #ecf0f1; margin: 0; padding: 20px; }
-        header { text-align: center; margin-bottom: 20px; }
-        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        nav a { padding: 8px 12px; background: #34495e; color: white; text-decoration: none; border-radius: 4px; }
-        .grid-ordenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card-cocina { background: #2c3e50; border-radius: 8px; padding: 15px; border-left: 5px solid #f39c12; }
-        .card-cocina h3 { margin-top: 0; border-bottom: 1px solid #34495e; padding-bottom: 5px; }
-        .item-linea { display: flex; justify-content: space-between; padding: 5px 0; font-size: 1.1em; }
-        button { width: 100%; margin-top: 15px; padding: 10px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 5px; cursor: pointer; }
-        button:hover { background: #219150; }
+        body { font-family: Arial, sans-serif; background-color: #333; color: white; margin: 0; padding: 1rem; }
+        h1 { text-align: center; color: #f39c12; }
+        .grid-cocina { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .ticket { background-color: #fff; color: #000; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-top: 5px solid #e74c3c; }
+        .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; border-bottom: 2px dashed #ccc; padding-bottom: 5px; }
+        .item { font-size: 1.1rem; margin: 5px 0; font-weight: bold; }
+        .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Pantalla de Cocina</h1>
-        <nav>
-            <a href="index.html">Tomar Orden</a>
-            <a href="cocina.html">Cocina</a>
-            <a href="caja.html">Caja</a>
-            <a href="inventario.html">Inventario</a>
-            <a href="reportes.html">Reportes</a>
-            <a href="admin.html">Admin</a>
-        </nav>
-    </header>
 
-    <div id="grid-cocina" class="grid-ordenes">Cargando órdenes de cocina...</div>
+    <h1>👨‍🍳 Comandas Pendientes</h1>
+    <div id="monitor" class="grid-cocina">
+        <p>Buscando nuevas órdenes...</p>
+    </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
-
-        async function cargarCocina() {
+        async function cargarOrdenesCocina() {
             try {
-                const res = await fetch(`${API_URL}/cocina`);
-                const items = await res.json();
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/cocina');
                 
-                const ordenesMap = {};
-                items.forEach(item => {
-                    if (!ordenesMap[item.id_orden]) {
-                        ordenesMap[item.id_orden] = {
-                            numero_mesa: item.numero_mesa,
-                            productos: []
-                        };
-                    }
-                    ordenesMap[item.id_orden].productos.push(item);
-                });
+                // Si el servidor está apagado o falla, esto lo atrapa
+                if (!respuesta.ok) {
+                    throw new Error('Error en el servidor');
+                }
 
-                const container = document.getElementById('grid-cocina');
-                container.innerHTML = '';
+                const datos = await respuesta.json();
+                const monitor = document.getElementById('monitor');
+                monitor.innerHTML = ''; 
 
-                const ordenesIds = Object.keys(ordenesMap);
-                if (ordenesIds.length === 0) {
-                    container.innerHTML = '<h2>No hay órdenes pendientes en cocina 🎉</h2>';
+                if (datos.length === 0) {
+                    monitor.innerHTML = '<p>No hay órdenes pendientes. ¡Todo limpio! ✨</p>';
                     return;
                 }
 
-                ordenesIds.forEach(id_orden => {
-                    const orden = ordenesMap[id_orden];
-                    const div = document.createElement('div');
-                    div.className = 'card-cocina';
-                    
+                const ordenesAgrupadas = datos.reduce((acc, fila) => {
+                    if (!acc[fila.id_orden]) {
+                        acc[fila.id_orden] = { mesa: fila.numero_mesa, productos: [] };
+                    }
+                    acc[fila.id_orden].productos.push({ nombre: fila.nombre, cantidad: fila.cantidad });
+                    return acc;
+                }, {});
+
+                for (let id_orden in ordenesAgrupadas) {
+                    const orden = ordenesAgrupadas[id_orden];
                     let htmlProductos = '';
                     orden.productos.forEach(prod => {
-                        htmlProductos += `
-                            <div class="item-linea">
-                                <span>${prod.nombre}</span>
-                                <strong>x${prod.cantidad}</strong>
-                            </div>
-                        `;
+                        htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}</div>`;
                     });
 
-                    div.innerHTML = `
-                        <h3>Orden #${id_orden} - ${orden.numero_mesa}</h3>
+                    const ticket = document.createElement('div');
+                    ticket.className = 'ticket';
+                    ticket.innerHTML = `
+                        <h2>Orden #${id_orden} - Mesa ${orden.mesa}</h2>
                         ${htmlProductos}
-                        <button onclick="marcarLista(${id_orden})">Marcar como Lista</button>
+                        <button class="btn-listo" onclick="marcarLista(${id_orden})">✅ Marcar como Lista</button>
                     `;
-                    container.appendChild(div);
-                });
-
-            } catch (err) {
-                console.error('Error cargando cocina:', err);
+                    monitor.appendChild(ticket);
+                }
+            } catch (error) {
+                console.error("Error completo:", error);
+                document.getElementById('monitor').innerHTML = '<p style="color:#e74c3c;">❌ Error: No se pudo conectar con el servidor. Verifica que la terminal negra de Node esté corriendo.</p>';
             }
         }
 
         async function marcarLista(id_orden) {
+            const confirmar = confirm(`¿Estás seguro de que la Orden #${id_orden} ya está terminada?`);
+            if (!confirmar) return;
+
             try {
-                const res = await fetch(`${API_URL}/ordenes/${id_orden}/lista`, { method: 'PUT' });
-                if (res.ok) {
-                    cargarCocina();
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/lista`, {
+                    method: 'PUT'
+                });
+                
+                if (respuesta.ok) {
+                    cargarOrdenesCocina();
                 } else {
-                    alert('Error al actualizar el estado');
+                    alert("Error al intentar marcar la orden.");
                 }
-            } catch (err) {
-                alert('Error de conexión');
+            } catch (error) {
+                alert("Hubo un error al conectar con el servidor.");
             }
         }
 
-        window.onload = () => {
-            cargarCocina();
-            setInterval(cargarCocina, 10000);
-        };
+        cargarOrdenesCocina();
+        setInterval(cargarOrdenesCocina, 5000);
     </script>
 </body>
 </html>

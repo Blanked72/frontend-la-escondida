@@ -3,175 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Toma de Órdenes</title>
+    <title>La Escondida - Menú</title>
     <style>
-        :root { --primary: #2c3e50; --accent: #e67e22; --bg: #f8f9fa; --card-bg: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
-        header { text-align: center; margin-bottom: 20px; }
-        nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        nav a { padding: 10px 15px; background: var(--primary); color: white; text-decoration: none; border-radius: 5px; font-weight: bold; }
-        nav a:hover { background: var(--accent); }
-        .container { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
-        .panel { background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .grid-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .card-producto { border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; background: #fff; cursor: pointer; transition: transform 0.2s; }
-        .card-producto:hover { transform: translateY(-3px); border-color: var(--accent); }
-        .card-producto h3 { margin: 0 0 10px 0; font-size: 1.1em; }
-        .card-producto p { color: var(--accent); font-weight: bold; font-size: 1.2em; margin: 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
-        button:hover { opacity: 0.9; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .btn-remove { background: #e74c3c; color: white; width: auto; padding: 5px 10px; font-size: 0.8em; }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; padding-bottom: 100px; }
+        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; }
+        header p { margin: 0; font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
+        .container { padding: 1rem; max-width: 600px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+        .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
+        .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
+        
+        /* Contenedor para los botones lado a lado */
+        .botones-accion { display: flex; gap: 10px; justify-content: space-between; margin-top: 10px; }
+        .btn-add, .btn-remove { 
+            color: white; 
+            border: none; 
+            padding: 0.6rem; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: bold; 
+            font-size: 1.2rem;
+        }
+        .btn-add { background-color: #27ae60; }
+        .btn-remove { background-color: #e74c3c; }
+
+        .cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+        .btn-order { background-color: #d35400; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 5px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+        .pantalla-bloqueo { text-align: center; padding: 50px 20px; margin-top: 20px; }
+        .pantalla-bloqueo h1 { font-size: 4rem; margin: 0; }
+        .pantalla-bloqueo h2 { color: #c0392b; }
+        .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
     </style>
 </head>
 <body>
+
     <header>
-        <h1>La Escondida - Toma de Órdenes</h1>
-        <nav>
-            <a href="index.html">Tomar Orden</a>
-            <a href="cocina.html">Cocina</a>
-            <a href="caja.html">Caja</a>
-            <a href="inventario.html">Inventario</a>
-            <a href="reportes.html">Reportes</a>
-            <a href="admin.html">Admin</a>
-        </nav>
+        <h1>☕ La Escondida</h1>
+        <p id="info-mesa">Buscando mesa...</p>
     </header>
 
     <div class="container">
-        <div class="panel">
-            <h2>Menú de Productos</h2>
-            <div id="grid-productos" class="grid-productos">Cargando productos...</div>
-        </div>
-
-        <div class="panel">
-            <h2>Orden Actual</h2>
-            <div class="form-group">
-                <label for="numero_mesa">Mesa o Datos de Entrega:</label>
-                <input type="text" id="numero_mesa" placeholder="Ej: Mesa 4 o Domicilio: Calle 5 #12">
-            </div>
-            
-            <h3>Carrito</h3>
-            <ul id="lista-carrito">
-                <p style="color: #888;">El carrito está vacío</p>
-            </ul>
-            
-            <h3>Total: $<span id="total-orden">0.00</span></h3>
-            <button onclick="enviarOrden()">Enviar Orden</button>
+        <h2>Nuestro Menú</h2>
+        <div id="menu-grid" class="grid">
+            <p>Cargando menú...</p>
         </div>
     </div>
 
+    <div class="cart-bar">
+        <div>
+            <strong style="font-size: 1.2rem;">Total: $<span id="total">0.00</span></strong>
+            <p style="margin: 0; color: #666;" id="items-count">0 artículos</p>
+        </div>
+        <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
+    </div>
+
     <script>
-        const API_URL = 'http://localhost:3000/api';
         let carrito = [];
+        let total = 0;
 
-        async function cargarProductos() {
+        const parametrosURL = new URLSearchParams(window.location.search);
+        const numeroMesa = parametrosURL.get('mesa');
+
+        if (!numeroMesa) {
+            document.body.innerHTML = 
+                '<div class="pantalla-bloqueo">' +
+                    '<h1>📱</h1>' +
+                    '<h2>Escanea tu Código QR</h2>' +
+                    '<p>Por favor, escanea el código QR de tu mesa para poder hacer tu pedido.</p>' +
+                '</div>';
+        } else {
+            document.getElementById('info-mesa').innerText = 'Ordenando desde: Mesa ' + numeroMesa;
+            cargarMenu();
+        }
+
+        async function cargarMenu() {
             try {
-                const res = await fetch(`${API_URL}/productos`);
-                const productos = await res.json();
-                const container = document.getElementById('grid-productos');
-                container.innerHTML = '';
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/productos');
+                const productos = await respuesta.json();
+                
+                const grid = document.getElementById('menu-grid');
+                grid.innerHTML = ''; 
 
-                productos.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = 'card-producto';
-                    div.onclick = () => agregarAlCarrito(p);
-                    div.innerHTML = `
-                        <h3>${p.nombre}</h3>
-                        <p>$${parseFloat(p.precio).toFixed(2)}</p>
-                    `;
-                    container.appendChild(div);
+                if(productos.length === 0) {
+                    grid.innerHTML = '<p>No hay productos disponibles.</p>';
+                    return;
+                }
+
+                productos.forEach(prod => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // Aseguramos que si el nombre tiene comillas no rompa el código
+                    const nombreSeguro = prod.nombre.replace(/'/g, "\\'"); 
+                    
+                    card.innerHTML = 
+                        '<h3>' + prod.nombre + '</h3>' +
+                        '<p>$' + prod.precio + '</p>' +
+                        '<div class="botones-accion">' +
+                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
+                            '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
+                        '</div>';
+                    grid.appendChild(card);
                 });
-            } catch (err) {
-                console.error('Error al cargar productos:', err);
+            } catch (error) {
+                document.getElementById('menu-grid').innerHTML = '<p style="color:red;">Error al conectar con el servidor.</p>';
             }
         }
 
-        function agregarAlCarrito(producto) {
-            const existe = carrito.find(item => item.id_producto === producto.id_producto);
-            if (existe) {
-                existe.cantidad++;
-            } else {
-                carrito.push({
-                    id_producto: producto.id_producto,
-                    nombre: producto.nombre,
-                    precio: parseFloat(producto.precio),
-                    cantidad: 1
-                });
-            }
-            actualizarCarritoUI();
+        function actualizarTextosCarrito() {
+            document.getElementById('total').innerText = total.toFixed(2);
+            document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
 
-        function eliminarDelCarrito(index) {
-            carrito.splice(index, 1);
-            actualizarCarritoUI();
+        function agregarAlCarrito(id, nombre, precio) {
+            carrito.push({ id_producto: id, nombre: nombre, precio: precio });
+            total += parseFloat(precio);
+            actualizarTextosCarrito();
         }
 
-        function actualizarCarritoUI() {
-            const ul = document.getElementById('lista-carrito');
-            const totalEl = document.getElementById('total-orden');
-            ul.innerHTML = '';
-            let total = 0;
-
-            if (carrito.length === 0) {
-                ul.innerHTML = '<p style="color: #888;">El carrito está vacío</p>';
-            } else {
-                carrito.forEach((item, index) => {
-                    total += item.precio * item.cantidad;
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div>
-                            <strong>${item.nombre}</strong> x ${item.cantidad}<br>
-                            <small>$${(item.precio * item.cantidad).toFixed(2)}</small>
-                        </div>
-                        <button class="btn-remove" onclick="eliminarDelCarrito(${index})">X</button>
-                    `;
-                    ul.appendChild(li);
-                });
+        function quitarUnidadDelCarrito(id, precio) {
+            // Buscamos si el producto existe en el carrito
+            const index = carrito.findIndex(item => item.id_producto === id);
+            
+            if (index !== -1) {
+                carrito.splice(index, 1);
+                total -= parseFloat(precio);
+                if (total < 0) total = 0;
+                actualizarTextosCarrito();
             }
-            totalEl.textContent = total.toFixed(2);
         }
 
         async function enviarOrden() {
             if (carrito.length === 0) {
-                alert('Agrega al menos un producto a la orden');
+                alert("Agrega algo al carrito primero.");
                 return;
             }
-
-            const mesa = document.getElementById('numero_mesa').value.trim() || 'Mesa 1';
-            const total = parseFloat(document.getElementById('total-orden').textContent);
-
-            const payload = {
-                numero_mesa: mesa,
+            
+            const datosOrden = {
+                mesa: numeroMesa,
                 total: total,
-                detalles: carrito
+                carrito: carrito
             };
 
             try {
-                const res = await fetch(`${API_URL}/ordenes`, {
+                document.querySelector('.btn-order').disabled = true;
+                document.querySelector('.btn-order').innerText = 'Enviando...';
+
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/ordenes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(datosOrden)
                 });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(data.mensaje);
+
+                const resultado = await respuesta.json();
+
+                if (resultado.id_orden) {
+                    alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
                     carrito = [];
-                    document.getElementById('numero_mesa').value = '';
-                    actualizarCarritoUI();
+                    total = 0;
+                    actualizarTextosCarrito();
                 } else {
-                    alert('Error: ' + data.error);
+                    alert("Hubo un problema al procesar la orden.");
                 }
-            } catch (err) {
-                alert('No se pudo enviar la orden al servidor');
+            } catch (error) {
+                alert("Hubo un error al enviar la orden. Intenta de nuevo.");
+            } finally {
+                document.querySelector('.btn-order').disabled = false;
+                document.querySelector('.btn-order').innerText = 'Enviar Orden';
             }
         }
-
-        window.onload = cargarProductos;
     </script>
 </body>
 </html>
