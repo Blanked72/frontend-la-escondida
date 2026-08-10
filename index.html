@@ -109,8 +109,13 @@
         let total = 0;
 
         // ==========================================
-        // LISTA DE EXTRAS DISPONIBLES (Puedes modificar los nombres y precios)
+        // CONFIGURACIÓN DE EXTRAS
         // ==========================================
+        
+        // 1. Pon aquí los IDs de tu base de datos de los productos que SÍ aceptan extras
+        const idsQueAceptanExtras = [1, 2, 3]; 
+
+        // 2. Lista de extras disponibles (Puedes modificar los nombres y precios)
         const extrasDisponibles = [
             { nombre: "Extra Queso", precio: 15 },
             { nombre: "Extra Tocino", precio: 20 },
@@ -119,7 +124,6 @@
             { nombre: "Sin Cebolla", precio: 0 } 
         ];
 
-        // Variables temporales para cuando abren el modal
         let productoSeleccionadoTemporamente = null;
 
         const parametrosURL = new URLSearchParams(window.location.search);
@@ -156,13 +160,13 @@
                     card.className = 'card';
                     const nombreSeguro = prod.nombre.replace(/'/g, "\\'"); 
                     
-                    // OJO AQUÍ: Ahora el botón de quitar solo pide el ID, y el de agregar abre las opciones
+                    // Ahora el botón de agregar llama a la función evaluarExtras()
                     card.innerHTML = 
                         '<h3>' + prod.nombre + '</h3>' +
                         '<p>$' + prod.precio + '</p>' +
                         '<div class="botones-accion">' +
                             '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
-                            '<button class="btn-add" onclick="abrirOpciones(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
+                            '<button class="btn-add" onclick="evaluarExtras(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
                         '</div>';
                     grid.appendChild(card);
                 });
@@ -172,8 +176,21 @@
         }
 
         // ==========================================
-        // LÓGICA DE EXTRAS
+        // LÓGICA DE DECISIÓN DE EXTRAS
         // ==========================================
+        function evaluarExtras(id, nombre, precio) {
+            // Verificamos si el ID de este producto está en nuestra lista de permitidos
+            if (idsQueAceptanExtras.includes(id)) {
+                // Si sí está, abrimos la ventana de extras
+                abrirOpciones(id, nombre, precio);
+            } else {
+                // Si no está (ej. Refrescos), lo mandamos directo al carrito
+                carrito.push({ id_producto: id, nombre: nombre, precio: parseFloat(precio) });
+                total += parseFloat(precio);
+                actualizarTextosCarrito();
+            }
+        }
+
         function abrirOpciones(id, nombre, precio) {
             productoSeleccionadoTemporamente = { id_producto: id, nombre: nombre, precio_base: parseFloat(precio) };
             
@@ -206,7 +223,6 @@
             let precioFinal = productoSeleccionadoTemporamente.precio_base;
             let extrasElegidos = [];
             
-            // Revisamos qué checkboxes marcó el cliente
             const checkboxes = document.querySelectorAll('.checkbox-extra:checked');
             checkboxes.forEach(cb => {
                 let indiceExtra = cb.value;
@@ -215,13 +231,11 @@
                 precioFinal += extraInfo.precio;
             });
 
-            // Modificamos el nombre del producto si eligió extras
             let nombreFinal = productoSeleccionadoTemporamente.nombre;
             if(extrasElegidos.length > 0) {
                 nombreFinal += ` (+ ${extrasElegidos.join(', ')})`;
             }
 
-            // Agregamos al carrito
             carrito.push({ 
                 id_producto: productoSeleccionadoTemporamente.id_producto, 
                 nombre: nombreFinal, 
@@ -242,17 +256,14 @@
         }
 
         function quitarUnidadDelCarrito(id) {
-            // Buscamos el último producto agregado con ese ID (para no borrar uno con extras accidentalmente)
-            // Se busca desde el final hacia el principio del arreglo
             for (let i = carrito.length - 1; i >= 0; i--) {
                 if (carrito[i].id_producto === id) {
-                    // Restamos exactamente lo que costaba ESE ítem en el carrito (incluyendo extras)
                     total -= carrito[i].precio;
                     if (total < 0) total = 0;
                     
                     carrito.splice(i, 1);
                     actualizarTextosCarrito();
-                    return; // Terminamos después de borrar uno
+                    return; 
                 }
             }
         }
@@ -266,7 +277,6 @@
                 return;
             }
 
-            // Agrupamos los productos POR SU NOMBRE FINAL (para que separe los que tienen extras de los que no)
             let productosAgrupados = {};
             carrito.forEach(item => {
                 if (!productosAgrupados[item.nombre]) {
