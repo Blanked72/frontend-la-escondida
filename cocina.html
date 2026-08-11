@@ -13,6 +13,7 @@
         .item { font-size: 1.1rem; margin: 5px 0; font-weight: bold; }
         .alerta-insumo { background-color: #fdecea; color: #c0392b; font-weight: bold; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.95rem; }
         .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
+        .btn-rechazar { background-color: #e74c3c; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -60,6 +61,11 @@
                         ? `<div class="alerta-insumo">⚠️ Falta insumo: ${orden.alerta}</div>`
                         : '';
 
+                    const motivoSeguro = orden.alerta ? orden.alerta.replace(/'/g, "\\'") : '';
+                    const htmlBotonRechazar = orden.alerta
+                        ? `<button class="btn-rechazar" onclick="rechazarOrden(${id_orden}, '${motivoSeguro}')">❌ Rechazar (sin insumo)</button>`
+                        : '';
+
                     const ticket = document.createElement('div');
                     ticket.className = 'ticket';
                     ticket.innerHTML = `
@@ -67,6 +73,7 @@
                         ${htmlProductos}
                         ${htmlAlerta}
                         <button class="btn-listo" onclick="marcarLista(${id_orden})">✅ Marcar como Lista</button>
+                        ${htmlBotonRechazar}
                     `;
                     monitor.appendChild(ticket);
                 }
@@ -89,6 +96,28 @@
                     cargarOrdenesCocina();
                 } else {
                     alert("Error al intentar marcar la orden.");
+                }
+            } catch (error) {
+                alert("Hubo un error al conectar con el servidor.");
+            }
+        }
+
+        async function rechazarOrden(id_orden, motivo) {
+            const confirmar = confirm(`¿Rechazar la Orden #${id_orden} por falta de insumo?\n${motivo}`);
+            if (!confirmar) return;
+
+            try {
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/rechazar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motivo })
+                });
+
+                if (respuesta.ok) {
+                    cargarOrdenesCocina();
+                } else {
+                    const err = await respuesta.json();
+                    alert(err.error || "No se pudo rechazar la orden.");
                 }
             } catch (error) {
                 alert("Hubo un error al conectar con el servidor.");
