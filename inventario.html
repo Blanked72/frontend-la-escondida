@@ -34,7 +34,7 @@
         function reproducirSonidoAlerta() {
             try {
                 const contexto = new (window.AudioContext || window.webkitAudioContext)();
-                const duracion = 0.15;
+                const duracion = 0.5;
                 const bufferSize = contexto.sampleRate * duracion;
                 const buffer = contexto.createBuffer(1, bufferSize, contexto.sampleRate);
                 const datos = buffer.getChannelData(0);
