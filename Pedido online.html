@@ -199,6 +199,9 @@
                     carrito = [];
                     total = 0;
                     actualizarTextosCarrito();
+                    document.getElementById('nombre-cliente').value = '';
+                    document.getElementById('telefono-cliente').value = '';
+                    document.getElementById('direccion-cliente').value = '';
                 } else {
                     alert(resultado.error || "Hubo un problema al procesar el pedido.");
                 }
