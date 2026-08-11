@@ -14,6 +14,10 @@
         .btn-cobrar { background-color: #3498db; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .btn-cobrar:hover { background-color: #2980b9; }
         .btn-cobrar:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .ticket.rechazada { border-left-color: #e74c3c; }
+        .motivo-rechazo { background-color: #fdecea; color: #c0392b; font-weight: bold; padding: 8px; border-radius: 4px; margin: 10px 0; font-size: 0.95rem; }
+        .btn-notificado { background-color: #34495e; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .btn-notificado:hover { background-color: #2c3e50; }
     </style>
 </head>
 <body>
@@ -42,14 +46,27 @@
 
                 datos.forEach(orden => {
                     const ticket = document.createElement('div');
-                    ticket.className = 'ticket';
-                    ticket.innerHTML = `
-                        <h2>Orden #${orden.id_orden} - Mesa ${orden.numero_mesa}</h2>
-                        <div class="total">Total: $${orden.total}</div>
-                        <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
-                            💵 Cobrar
-                        </button>
-                    `;
+
+                    if (orden.estado === 'Rechazada') {
+                        ticket.className = 'ticket rechazada';
+                        ticket.innerHTML = `
+                            <h2>Orden #${orden.id_orden} - Mesa ${orden.numero_mesa}</h2>
+                            <div class="motivo-rechazo">⚠️ Cocina no pudo prepararla: ${orden.motivo_rechazo || 'Falta de insumo'}</div>
+                            <button class="btn-notificado" onclick="notificarRechazo(${orden.id_orden})">
+                                ✅ Ya avisé al cliente
+                            </button>
+                        `;
+                    } else {
+                        ticket.className = 'ticket';
+                        ticket.innerHTML = `
+                            <h2>Orden #${orden.id_orden} - Mesa ${orden.numero_mesa}</h2>
+                            <div class="total">Total: $${orden.total}</div>
+                            <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
+                                💵 Cobrar
+                            </button>
+                        `;
+                    }
+
                     pantalla.appendChild(ticket);
                 });
             } catch (error) {
@@ -106,6 +123,22 @@
 
         cargarOrdenesCaja();
         setInterval(cargarOrdenesCaja, 5000);
+
+        async function notificarRechazo(id_orden) {
+            try {
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/notificar-rechazo`, {
+                    method: 'PUT'
+                });
+
+                if (respuesta.ok) {
+                    await cargarOrdenesCaja();
+                } else {
+                    alert("No se pudo actualizar la orden.");
+                }
+            } catch (error) {
+                alert("Hubo un error de red al actualizar la orden.");
+            }
+        }
     </script>
 </body>
 </html>
