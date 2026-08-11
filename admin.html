@@ -37,11 +37,12 @@
                     <tr>
                         <th>Insumo</th>
                         <th>Stock Actual</th>
+                        <th>Stock Mínimo</th>
                         <th>Ajustar Stock</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-insumos">
-                    <tr><td colspan="3">Cargando insumos...</td></tr>
+                    <tr><td colspan="4">Cargando insumos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -123,7 +124,7 @@
                 selectInsumo.innerHTML = '<option value="">Selecciona un insumo...</option>';
 
                 if (insumos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3">No hay insumos registrados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4">No hay insumos registrados.</td></tr>';
                     return;
                 }
 
@@ -133,6 +134,10 @@
                     tr.innerHTML = `
                         <td><strong>${insumo.nombre}</strong></td>
                         <td>${insumo.cantidad_actual}</td>
+                        <td>
+                            <input type="number" step="0.001" id="minimo-${insumo.id_insumo}" value="${insumo.stock_minimo ?? 5}" style="width: 70px;">
+                            <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarMinimo(${insumo.id_insumo}, '${insumo.nombre}')">💾</button>
+                        </td>
                         <td>
                             <button class="btn-add" onclick="modificarStock(${insumo.id_insumo}, '${insumo.nombre}', false)">➕ Sumar</button>
                             <button class="btn-sub" onclick="modificarStock(${insumo.id_insumo}, '${insumo.nombre}', true)">➖ Restar</button>
@@ -182,6 +187,34 @@
                 }
             } catch (error) {
                 alert("Error de conexión al actualizar stock.");
+            }
+        }
+
+        // --- Guardar Stock Mínimo ---
+        async function guardarMinimo(id_insumo, nombre) {
+            const input = document.getElementById(`minimo-${id_insumo}`);
+            const stock_minimo = parseFloat(input.value);
+
+            if (isNaN(stock_minimo) || stock_minimo < 0) {
+                alert("Ingresa un número válido para el stock mínimo.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/insumos/${id_insumo}/minimo`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stock_minimo })
+                });
+
+                if (res.ok) {
+                    alert(`Stock mínimo de "${nombre}" actualizado.`);
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al actualizar el stock mínimo.");
             }
         }
 

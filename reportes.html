@@ -59,6 +59,28 @@
         </table>
     </div>
 
+    <!-- COMANDAS DE UN DÍA ESPECÍFICO -->
+    <div class="seccion-historial">
+        <h2>🧾 Ver comandas de un día</h2>
+        <div style="display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <input type="date" id="fecha-comandas" style="padding: 8px; font-size: 1rem;">
+            <button class="btn-actualizar" style="margin: 0;" onclick="cargarComandasDelDia()">Ver comandas</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Hora</th>
+                    <th>Origen</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-comandas">
+                <tr><td colspan="4">Elige una fecha y presiona "Ver comandas".</td></tr>
+            </tbody>
+        </table>
+    </div>
+
     <script>
         const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
 
@@ -101,6 +123,47 @@
 
         // Cargar reporte automáticamente al abrir la vista
         cargarReporte();
+
+        async function cargarComandasDelDia() {
+            const fecha = document.getElementById('fecha-comandas').value;
+            const tbody = document.getElementById('tabla-comandas');
+
+            if (!fecha) {
+                alert("Elige una fecha primero.");
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4">Buscando comandas...</td></tr>';
+
+            try {
+                const respuesta = await fetch(`${API_BASE}/comandas?fecha=${fecha}`);
+                const comandas = await respuesta.json();
+
+                if (!Array.isArray(comandas) || comandas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No hay comandas cobradas en esa fecha.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                comandas.forEach(c => {
+                    const origen = c.tipo_pedido === 'domicilio' ? `🚚 Domicilio - ${c.nombre_cliente || ''}`
+                        : c.tipo_pedido === 'recoger' ? `🛍️ Recoger - ${c.nombre_cliente || ''}`
+                        : `Mesa ${c.numero_mesa}`;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${c.id_orden}</td>
+                        <td>${c.hora}</td>
+                        <td>${origen}</td>
+                        <td><strong>$${parseFloat(c.total).toFixed(2)}</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Error al obtener comandas del día:", error);
+                tbody.innerHTML = '<tr><td colspan="4">Error al conectar con el servidor.</td></tr>';
+            }
+        }
     </script>
 </body>
 </html>
