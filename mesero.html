@@ -2,56 +2,107 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mesero - Listos para Servir</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Mesero - La Escondida</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .grid { display: flex; flex-wrap: wrap; gap: 15px; }
-        .orden-card { border: 2px solid #4CAF50; padding: 15px; border-radius: 8px; width: 250px; background: #e8f5e9; }
-        button { background: #4CAF50; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; background-color: #ecf0f1; color: #2c3e50; margin: 0; padding: 1rem; }
+        h1 { text-align: center; color: #2980b9; }
+        .grid-mesero { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+        .ticket { background-color: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-left: 5px solid #2980b9; }
+        .ticket.lista { border-left-color: #27ae60; }
+        .ticket.rechazada { border-left-color: #e74c3c; }
+        .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; }
+        .item { font-size: 1rem; margin: 4px 0; }
+        .estado-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; color: white; margin-bottom: 10px; }
+        .estado-badge.Pendiente { background-color: #f39c12; }
+        .estado-badge.Lista { background-color: #27ae60; }
+        .estado-badge.Rechazada { background-color: #e74c3c; }
+        .info-cliente { background-color: #eaf2f8; color: #2c3e50; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.95rem; }
+        .motivo-rechazo { background-color: #fdecea; color: #c0392b; font-weight: bold; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.95rem; }
     </style>
 </head>
 <body>
-    <h2>🔔 Vista de Mesero</h2>
-    <div id="contenedor-mesero" class="grid"></div>
+
+    <h1>🧑‍💼 Vista Mesero (solo lectura)</h1>
+    <div id="pantalla-mesero" class="grid-mesero">
+        <p>Buscando órdenes activas...</p>
+    </div>
 
     <script>
-        const API_URL = 'https://tu-app-en-render.onrender.com/api';
+        async function cargarOrdenesMesero() {
+            try {
+                const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/mesero');
+                const datos = await respuesta.json();
 
-        async function cargarMesero() {
-            const res = await fetch(`${API_URL}/ordenes`);
-            const ordenes = await res.json();
-            
-            const listos = ordenes.filter(o => o.estado === 'Listo');
-            const contenedor = document.getElementById('contenedor-mesero');
-            contenedor.innerHTML = '';
+                const pantalla = document.getElementById('pantalla-mesero');
+                pantalla.innerHTML = '';
 
-            listos.forEach(o => {
-                let itemsHTML = '';
-                o.detalles.forEach(d => {
-                    itemsHTML += `<li>${d.cantidad}x ${d.producto}</li>`;
-                });
+                if (datos.length === 0) {
+                    pantalla.innerHTML = '<p>No hay órdenes activas en este momento.</p>';
+                    return;
+                }
 
-                contenedor.innerHTML += `
-                    <div class="orden-card">
-                        <h3>🔔 Llevar a Mesa #${o.numero_mesa}!</h3>
-                        <ul>${itemsHTML}</ul>
-                        <button onclick="marcarEntregado(${o.id_orden})">🏃 Entregado en Mesa</button>
-                    </div>
-                `;
-            });
+                const ordenesAgrupadas = datos.reduce((acc, fila) => {
+                    if (!acc[fila.id_orden]) {
+                        acc[fila.id_orden] = {
+                            mesa: fila.numero_mesa,
+                            estado: fila.estado,
+                            total: fila.total,
+                            motivoRechazo: fila.motivo_rechazo,
+                            tipoPedido: fila.tipo_pedido,
+                            nombreCliente: fila.nombre_cliente,
+                            telefono: fila.telefono,
+                            direccion: fila.direccion,
+                            productos: []
+                        };
+                    }
+                    acc[fila.id_orden].productos.push({ nombre: fila.nombre_producto, cantidad: fila.cantidad });
+                    return acc;
+                }, {});
+
+                for (let id_orden in ordenesAgrupadas) {
+                    const orden = ordenesAgrupadas[id_orden];
+
+                    const origen = orden.tipoPedido === 'domicilio' ? '🚚 A domicilio'
+                        : orden.tipoPedido === 'recoger' ? '🛍️ Para recoger'
+                        : `Mesa ${orden.mesa}`;
+
+                    const htmlInfoCliente = orden.tipoPedido !== 'mesa'
+                        ? `<div class="info-cliente">👤 ${orden.nombreCliente} | 📞 ${orden.telefono}${orden.tipoPedido === 'domicilio' ? ' | 📍 ' + orden.direccion : ''}</div>`
+                        : '';
+
+                    let htmlProductos = '';
+                    orden.productos.forEach(prod => {
+                        htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}</div>`;
+                    });
+
+                    const htmlMotivoRechazo = orden.estado === 'Rechazada'
+                        ? `<div class="motivo-rechazo">⚠️ ${orden.motivoRechazo || 'Falta de insumo'}</div>`
+                        : '';
+
+                    const claseTicket = orden.estado === 'Lista' ? 'ticket lista'
+                        : orden.estado === 'Rechazada' ? 'ticket rechazada'
+                        : 'ticket';
+
+                    const ticket = document.createElement('div');
+                    ticket.className = claseTicket;
+                    ticket.innerHTML = `
+                        <h2>Orden #${id_orden} - ${origen}</h2>
+                        <span class="estado-badge ${orden.estado}">${orden.estado}</span>
+                        ${htmlInfoCliente}
+                        ${htmlProductos}
+                        ${htmlMotivoRechazo}
+                    `;
+                    pantalla.appendChild(ticket);
+                }
+            } catch (error) {
+                console.error("Error al cargar órdenes:", error);
+                document.getElementById('pantalla-mesero').innerHTML = '<p style="color:#e74c3c;">❌ No se pudo conectar con el servidor.</p>';
+            }
         }
 
-        async function marcarEntregado(id) {
-            await fetch(`${API_URL}/ordenes/${id}/estado`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estado: 'Entregado' })
-            });
-            cargarMesero();
-        }
-
-        setInterval(cargarMesero, 4000);
-        cargarMesero();
+        cargarOrdenesMesero();
+        setInterval(cargarOrdenesMesero, 5000);
     </script>
 </body>
 </html>

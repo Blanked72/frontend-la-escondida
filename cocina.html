@@ -12,6 +12,7 @@
         .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; border-bottom: 2px dashed #ccc; padding-bottom: 5px; }
         .item { font-size: 1.1rem; margin: 5px 0; font-weight: bold; }
         .alerta-insumo { background-color: #fdecea; color: #c0392b; font-weight: bold; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.95rem; }
+        .info-cliente { background-color: #eaf2f8; color: #2c3e50; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.95rem; }
         .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
         .btn-rechazar { background-color: #e74c3c; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
     </style>
@@ -44,7 +45,15 @@
 
                 const ordenesAgrupadas = datos.reduce((acc, fila) => {
                     if (!acc[fila.id_orden]) {
-                        acc[fila.id_orden] = { mesa: fila.numero_mesa, productos: [], alerta: fila.alerta_insumo };
+                        acc[fila.id_orden] = {
+                            mesa: fila.numero_mesa,
+                            tipoPedido: fila.tipo_pedido,
+                            nombreCliente: fila.nombre_cliente,
+                            telefono: fila.telefono,
+                            direccion: fila.direccion,
+                            productos: [],
+                            alerta: fila.alerta_insumo
+                        };
                     }
                     acc[fila.id_orden].productos.push({ nombre: fila.nombre, cantidad: fila.cantidad });
                     return acc;
@@ -56,6 +65,14 @@
                     orden.productos.forEach(prod => {
                         htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}</div>`;
                     });
+
+                    const origen = orden.tipoPedido === 'domicilio' ? '🚚 A domicilio'
+                        : orden.tipoPedido === 'recoger' ? '🛍️ Para recoger'
+                        : `Mesa ${orden.mesa}`;
+
+                    const htmlInfoCliente = orden.tipoPedido !== 'mesa'
+                        ? `<div class="info-cliente">👤 ${orden.nombreCliente} | 📞 ${orden.telefono}${orden.tipoPedido === 'domicilio' ? ' | 📍 ' + orden.direccion : ''}</div>`
+                        : '';
 
                     const htmlAlerta = orden.alerta
                         ? `<div class="alerta-insumo">⚠️ Falta insumo: ${orden.alerta}</div>`
@@ -69,7 +86,8 @@
                     const ticket = document.createElement('div');
                     ticket.className = 'ticket';
                     ticket.innerHTML = `
-                        <h2>Orden #${id_orden} - Mesa ${orden.mesa}</h2>
+                        <h2>Orden #${id_orden} - ${origen}</h2>
+                        ${htmlInfoCliente}
                         ${htmlProductos}
                         ${htmlAlerta}
                         <button class="btn-listo" onclick="marcarLista(${id_orden})">✅ Marcar como Lista</button>
