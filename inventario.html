@@ -34,15 +34,35 @@
         function reproducirSonidoAlerta() {
             try {
                 const contexto = new (window.AudioContext || window.webkitAudioContext)();
-                const oscilador = contexto.createOscillator();
+                const duracion = 0.15;
+                const bufferSize = contexto.sampleRate * duracion;
+                const buffer = contexto.createBuffer(1, bufferSize, contexto.sampleRate);
+                const datos = buffer.getChannelData(0);
+
+                // Ruido blanco con caída rápida = "chasquido"
+                for (let i = 0; i < bufferSize; i++) {
+                    datos[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
+                }
+
+                const fuente = contexto.createBufferSource();
+                fuente.buffer = buffer;
+
+                // Filtro que baja de agudo a grave para simular el "crack" del látigo
+                const filtro = contexto.createBiquadFilter();
+                filtro.type = 'bandpass';
+                filtro.frequency.setValueAtTime(3500, contexto.currentTime);
+                filtro.frequency.exponentialRampToValueAtTime(400, contexto.currentTime + duracion);
+                filtro.Q.value = 1;
+
                 const volumen = contexto.createGain();
-                oscilador.connect(volumen);
+                volumen.gain.setValueAtTime(1, contexto.currentTime);
+                volumen.gain.exponentialRampToValueAtTime(0.01, contexto.currentTime + duracion);
+
+                fuente.connect(filtro);
+                filtro.connect(volumen);
                 volumen.connect(contexto.destination);
-                oscilador.type = 'sine';
-                oscilador.frequency.value = 880;
-                volumen.gain.setValueAtTime(0.2, contexto.currentTime);
-                oscilador.start();
-                oscilador.stop(contexto.currentTime + 0.3);
+
+                fuente.start();
             } catch (error) {
                 console.error("No se pudo reproducir el sonido de alerta:", error);
             }
