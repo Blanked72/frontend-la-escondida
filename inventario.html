@@ -22,6 +22,10 @@
 
     <h1>📦 Stock e Inventario</h1>
 
+    <button id="btn-activar-sonido" class="btn-actualizar" onclick="activarSonido()" style="margin-top: 0; margin-bottom: 1.5rem;">
+        🔔 Activar sonido de alertas
+    </button>
+
     <div id="banner-alerta"></div>
 
     <div id="grid-inventario" class="grid">
@@ -31,12 +35,29 @@
     <button class="btn-actualizar" onclick="cargarInventario()">🔄 Actualizar Stock</button>
 
     <script>
-        function reproducirSonidoAlerta() {
+        // En celulares el navegador bloquea el audio hasta que el usuario toca la pantalla,
+        // por eso el AudioContext se crea con el botón "Activar sonido" y se reutiliza aquí.
+        let contextoAudio = null;
+
+        function activarSonido() {
             try {
-                const contexto = new (window.AudioContext || window.webkitAudioContext)();
+                contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
+                contextoAudio.resume();
+                const boton = document.getElementById('btn-activar-sonido');
+                boton.innerText = '🔔 Sonido activado';
+                boton.disabled = true;
+            } catch (error) {
+                console.error("No se pudo activar el audio:", error);
+            }
+        }
+
+        function reproducirSonidoAlerta() {
+            if (!contextoAudio) return; // El usuario aún no presionó "Activar sonido"
+
+            try {
                 const duracion = 0.5;
-                const bufferSize = contexto.sampleRate * duracion;
-                const buffer = contexto.createBuffer(1, bufferSize, contexto.sampleRate);
+                const bufferSize = contextoAudio.sampleRate * duracion;
+                const buffer = contextoAudio.createBuffer(1, bufferSize, contextoAudio.sampleRate);
                 const datos = buffer.getChannelData(0);
 
                 // Ruido blanco con caída rápida = "chasquido"
@@ -44,23 +65,23 @@
                     datos[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
                 }
 
-                const fuente = contexto.createBufferSource();
+                const fuente = contextoAudio.createBufferSource();
                 fuente.buffer = buffer;
 
                 // Filtro que baja de agudo a grave para simular el "crack" del látigo
-                const filtro = contexto.createBiquadFilter();
+                const filtro = contextoAudio.createBiquadFilter();
                 filtro.type = 'bandpass';
-                filtro.frequency.setValueAtTime(3500, contexto.currentTime);
-                filtro.frequency.exponentialRampToValueAtTime(400, contexto.currentTime + duracion);
+                filtro.frequency.setValueAtTime(3500, contextoAudio.currentTime);
+                filtro.frequency.exponentialRampToValueAtTime(400, contextoAudio.currentTime + duracion);
                 filtro.Q.value = 1;
 
-                const volumen = contexto.createGain();
-                volumen.gain.setValueAtTime(1, contexto.currentTime);
-                volumen.gain.exponentialRampToValueAtTime(0.01, contexto.currentTime + duracion);
+                const volumen = contextoAudio.createGain();
+                volumen.gain.setValueAtTime(1, contextoAudio.currentTime);
+                volumen.gain.exponentialRampToValueAtTime(0.01, contextoAudio.currentTime + duracion);
 
                 fuente.connect(filtro);
                 filtro.connect(volumen);
-                volumen.connect(contexto.destination);
+                volumen.connect(contextoAudio.destination);
 
                 fuente.start();
             } catch (error) {
