@@ -19,6 +19,8 @@
         .btn-notificado { background-color: #34495e; color: white; border: none; padding: 12px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .btn-notificado:hover { background-color: #2c3e50; }
         .info-cliente { background-color: #eaf2f8; color: #2c3e50; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.95rem; }
+        .btn-imprimir { background-color: #7f8c8d; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
+        .btn-imprimir:hover { background-color: #6c7a7a; }
     </style>
 </head>
 <body>
@@ -74,6 +76,9 @@
                             <div class="total">Total: $${orden.total}</div>
                             <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
                                 💵 Cobrar
+                            </button>
+                            <button class="btn-imprimir" onclick="imprimirTicket(${orden.id_orden})">
+                                🖨️ Imprimir ticket
                             </button>
                         `;
                     }
@@ -148,6 +153,69 @@
                 }
             } catch (error) {
                 alert("Hubo un error de red al actualizar la orden.");
+            }
+        }
+
+        async function imprimirTicket(id_orden) {
+            try {
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/detalle`);
+                const datos = await respuesta.json();
+
+                if (!respuesta.ok) {
+                    alert(datos.error || "No se pudo obtener el detalle de la orden.");
+                    return;
+                }
+
+                const { orden, items } = datos;
+                const origen = orden.tipo_pedido === 'domicilio' ? 'A domicilio'
+                    : orden.tipo_pedido === 'recoger' ? 'Para recoger'
+                    : `Mesa ${orden.numero_mesa}`;
+
+                let filasItems = '';
+                items.forEach(item => {
+                    const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
+                    filasItems += `
+                        <tr>
+                            <td>${item.cantidad}x ${item.nombre}</td>
+                            <td style="text-align:right;">$${subtotal}</td>
+                        </tr>
+                    `;
+                });
+
+                const infoCliente = orden.tipo_pedido !== 'mesa'
+                    ? `<p>${orden.nombre_cliente || ''} - ${orden.telefono || ''}${orden.direccion ? '<br>' + orden.direccion : ''}</p>`
+                    : '';
+
+                const ventana = window.open('', '_blank', 'width=350,height=600');
+                ventana.document.write(`
+                    <html>
+                    <head>
+                        <title>Ticket Orden #${id_orden}</title>
+                        <style>
+                            body { font-family: monospace; padding: 15px; }
+                            h2 { text-align: center; margin-bottom: 5px; }
+                            p { text-align: center; margin: 2px 0; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                            td { padding: 4px 0; }
+                            .linea { border-top: 1px dashed #000; margin: 10px 0; }
+                            .total-final { font-size: 1.2rem; font-weight: bold; text-align: right; margin-top: 10px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>La Escondida</h2>
+                        <p>Orden #${id_orden} - ${origen}</p>
+                        ${infoCliente}
+                        <div class="linea"></div>
+                        <table>${filasItems}</table>
+                        <div class="linea"></div>
+                        <div class="total-final">Total: $${parseFloat(orden.total).toFixed(2)}</div>
+                    </body>
+                    </html>
+                `);
+                ventana.document.close();
+                ventana.print();
+            } catch (error) {
+                alert("Hubo un error al generar el ticket.");
             }
         }
     </script>

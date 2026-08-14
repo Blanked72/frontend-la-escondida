@@ -21,6 +21,14 @@
         th, td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
         th { background-color: #2c3e50; color: white; }
         tr:nth-child(even) { background-color: #f8f9fa; }
+        .btn-exportar { background-color: #27ae60; color: white; border: none; padding: 8px 16px; font-size: 0.95rem; border-radius: 5px; cursor: pointer; margin: 0.5rem auto 0; display: block; }
+        .btn-exportar:hover { background-color: #229954; }
+        .btn-detalle { background-color: #2980b9; color: white; border: none; padding: 6px 10px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; }
+
+        #modal-detalle { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
+        #modal-detalle .caja-modal { background: white; padding: 1.5rem; border-radius: 8px; width: 350px; max-height: 80vh; overflow-y: auto; }
+        #modal-detalle h3 { margin-top: 0; }
+        #modal-detalle .btn-cerrar { background-color: #7f8c8d; color: white; border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 1rem; }
     </style>
 </head>
 <body>
@@ -57,6 +65,7 @@
                 <tr><td colspan="3">Cargando historial de ventas...</td></tr>
             </tbody>
         </table>
+        <button class="btn-exportar" onclick="exportarHistorialCSV()">⬇️ Exportar historial a CSV</button>
     </div>
 
     <!-- COMANDAS DE UN DÍA ESPECÍFICO -->
@@ -73,16 +82,28 @@
                     <th>Hora</th>
                     <th>Origen</th>
                     <th>Total</th>
+                    <th>Detalle</th>
                 </tr>
             </thead>
             <tbody id="tabla-comandas">
-                <tr><td colspan="4">Elige una fecha y presiona "Ver comandas".</td></tr>
+                <tr><td colspan="5">Elige una fecha y presiona "Ver comandas".</td></tr>
             </tbody>
         </table>
+        <button class="btn-exportar" onclick="exportarComandasCSV()">⬇️ Exportar comandas a CSV</button>
+    </div>
+
+    <div id="modal-detalle">
+        <div class="caja-modal">
+            <h3 id="modal-titulo">Detalle de la orden</h3>
+            <div id="modal-contenido">Cargando...</div>
+            <button class="btn-cerrar" onclick="cerrarModal()">Cerrar</button>
+        </div>
     </div>
 
     <script>
         const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
+        let historialCache = [];
+        let comandasCache = [];
 
         async function cargarReporte() {
             try {
@@ -96,16 +117,17 @@
                 // 2. Cargar el historial acumulado por días
                 const respuestaHistorial = await fetch(`${API_BASE}/historial`);
                 const diasAnteriores = await respuestaHistorial.json();
+                historialCache = Array.isArray(diasAnteriores) ? diasAnteriores : [];
 
                 const tbody = document.getElementById('tabla-historial');
                 tbody.innerHTML = '';
 
-                if (!Array.isArray(diasAnteriores) || diasAnteriores.length === 0) {
+                if (historialCache.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="3">No hay ventas registradas en días anteriores.</td></tr>';
                     return;
                 }
 
-                diasAnteriores.forEach(dia => {
+                historialCache.forEach(dia => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>${dia.fecha}</strong></td>
@@ -138,14 +160,15 @@
             try {
                 const respuesta = await fetch(`${API_BASE}/comandas?fecha=${fecha}`);
                 const comandas = await respuesta.json();
+                comandasCache = Array.isArray(comandas) ? comandas : [];
 
-                if (!Array.isArray(comandas) || comandas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No hay comandas cobradas en esa fecha.</td></tr>';
+                if (comandasCache.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">No hay comandas cobradas en esa fecha.</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = '';
-                comandas.forEach(c => {
+                comandasCache.forEach(c => {
                     const origen = c.tipo_pedido === 'domicilio' ? `🚚 Domicilio - ${c.nombre_cliente || ''}`
                         : c.tipo_pedido === 'recoger' ? `🛍️ Recoger - ${c.nombre_cliente || ''}`
                         : `Mesa ${c.numero_mesa}`;
@@ -156,13 +179,83 @@
                         <td>${c.hora}</td>
                         <td>${origen}</td>
                         <td><strong>$${parseFloat(c.total).toFixed(2)}</strong></td>
+                        <td><button class="btn-detalle" onclick="verDetalleOrden(${c.id_orden})">👁️ Ver</button></td>
                     `;
                     tbody.appendChild(tr);
                 });
             } catch (error) {
                 console.error("Error al obtener comandas del día:", error);
-                tbody.innerHTML = '<tr><td colspan="4">Error al conectar con el servidor.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5">Error al conectar con el servidor.</td></tr>';
             }
+        }
+
+        // --- Ver detalle de una comanda ---
+        async function verDetalleOrden(id_orden) {
+            const modal = document.getElementById('modal-detalle');
+            const contenido = document.getElementById('modal-contenido');
+            document.getElementById('modal-titulo').innerText = `Orden #${id_orden}`;
+            contenido.innerHTML = 'Cargando...';
+            modal.style.display = 'flex';
+
+            try {
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/detalle`);
+                const datos = await respuesta.json();
+
+                if (!respuesta.ok) {
+                    contenido.innerHTML = `<p>${datos.error || 'No se pudo cargar el detalle.'}</p>`;
+                    return;
+                }
+
+                let filas = '';
+                datos.items.forEach(item => {
+                    const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
+                    filas += `<tr><td>${item.cantidad}x ${item.nombre}</td><td style="text-align:right;">$${subtotal}</td></tr>`;
+                });
+
+                contenido.innerHTML = `
+                    <table style="width:100%;">${filas}</table>
+                    <p style="text-align:right; font-weight:bold; margin-top:1rem;">Total: $${parseFloat(datos.orden.total).toFixed(2)}</p>
+                `;
+            } catch (error) {
+                contenido.innerHTML = '<p>Error al conectar con el servidor.</p>';
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-detalle').style.display = 'none';
+        }
+
+        // --- Exportar a CSV ---
+        function descargarCSV(nombreArchivo, encabezados, filas) {
+            const contenido = [encabezados.join(','), ...filas.map(f => f.join(','))].join('\n');
+            const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+            const enlace = document.createElement('a');
+            enlace.href = URL.createObjectURL(blob);
+            enlace.download = nombreArchivo;
+            enlace.click();
+        }
+
+        function exportarHistorialCSV() {
+            if (historialCache.length === 0) {
+                alert("No hay historial cargado para exportar.");
+                return;
+            }
+            const filas = historialCache.map(dia => [dia.fecha, dia.total_ordenes, dia.total_vendido]);
+            descargarCSV('historial_ventas.csv', ['Fecha', 'Ordenes Cobradas', 'Total Vendido'], filas);
+        }
+
+        function exportarComandasCSV() {
+            if (comandasCache.length === 0) {
+                alert("Primero busca las comandas de una fecha para exportar.");
+                return;
+            }
+            const filas = comandasCache.map(c => [
+                c.id_orden,
+                c.hora,
+                c.tipo_pedido === 'mesa' ? `Mesa ${c.numero_mesa}` : `${c.tipo_pedido} - ${c.nombre_cliente || ''}`,
+                c.total
+            ]);
+            descargarCSV('comandas.csv', ['Orden', 'Hora', 'Origen', 'Total'], filas);
         }
     </script>
 </body>

@@ -22,9 +22,25 @@
         .btn-del { background-color: #e74c3c; color: white; }
         .btn-submit { background-color: #3498db; color: white; width: 100%; padding: 10px; margin-top: 5px; }
         button:hover { opacity: 0.9; }
+        #login-overlay { position: fixed; inset: 0; background: #2c3e50; display: flex; align-items: center; justify-content: center; z-index: 100; }
+        #login-overlay .caja-login { background: white; padding: 2rem; border-radius: 8px; width: 300px; text-align: center; }
+        #login-overlay input { margin-bottom: 10px; }
+        #login-overlay p { color: #e74c3c; font-weight: bold; min-height: 1.2em; }
+        #contenido-admin { display: none; }
     </style>
 </head>
 <body>
+
+    <div id="login-overlay">
+        <div class="caja-login">
+            <h2>🔒 Acceso Administrador</h2>
+            <input type="password" id="password-admin" placeholder="Contraseña" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <button class="btn-submit" onclick="iniciarSesion()">Entrar</button>
+            <p id="error-login"></p>
+        </div>
+    </div>
+
+    <div id="contenido-admin">
 
     <h1>⚙️ Panel de Control - Administración General</h1>
 
@@ -108,8 +124,86 @@
         </div>
     </div>
 
+    <div class="grid">
+        <!-- 5. PRODUCTOS DEL MENÚ -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>🍽️ Productos del Menú</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos">
+                    <tr><td colspan="4">Cargando productos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 6. REGISTRAR NUEVO PRODUCTO -->
+        <div class="card">
+            <h2>➕ Nuevo Producto</h2>
+            <form id="form-producto">
+                <div class="form-group">
+                    <label>Nombre del Producto:</label>
+                    <input type="text" id="nombre-producto" placeholder="Ej. Café Americano" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio:</label>
+                    <input type="number" step="0.01" id="precio-producto" placeholder="Ej. 35.00" required>
+                </div>
+                <button type="submit" class="btn-submit">Guardar Producto</button>
+            </form>
+        </div>
+    </div>
+
+    </div>
+
     <script>
         const API_URL = 'https://backend-la-escondida.onrender.com/api';
+
+        // --- Login ---
+        function headersAdmin() {
+            return {
+                'Content-Type': 'application/json',
+                'x-admin-password': sessionStorage.getItem('admin_password') || ''
+            };
+        }
+
+        async function iniciarSesion() {
+            const password = document.getElementById('password-admin').value;
+            const errorLogin = document.getElementById('error-login');
+
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (res.ok) {
+                    sessionStorage.setItem('admin_password', password);
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('contenido-admin').style.display = 'block';
+                    cargarInsumos();
+                    cargarProductos();
+                    cargarRecetas();
+                } else {
+                    errorLogin.innerText = 'Contraseña incorrecta.';
+                }
+            } catch (error) {
+                errorLogin.innerText = 'Error de conexión.';
+            }
+        }
+
+        // Si ya inició sesión antes en esta pestaña, entra directo
+        if (sessionStorage.getItem('admin_password')) {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('contenido-admin').style.display = 'block';
+        }
 
         // --- Cargar Insumos ---
         async function cargarInsumos() {
@@ -174,7 +268,7 @@
             try {
                 const res = await fetch(`${API_URL}/insumos/${id_insumo}/stock`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headersAdmin(),
                     body: JSON.stringify({ cantidad_agregar: cantidad })
                 });
 
@@ -203,7 +297,7 @@
             try {
                 const res = await fetch(`${API_URL}/insumos/${id_insumo}/minimo`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headersAdmin(),
                     body: JSON.stringify({ stock_minimo })
                 });
 
@@ -227,7 +321,7 @@
             try {
                 const res = await fetch(`${API_URL}/insumos`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headersAdmin(),
                     body: JSON.stringify({ nombre, cantidad_actual })
                 });
 
@@ -243,7 +337,7 @@
             }
         });
 
-        // --- Cargar Productos (para el selector de recetas) ---
+        // --- Cargar Productos (para el selector de recetas y la tabla editable) ---
         async function cargarProductos() {
             try {
                 const res = await fetch(`${API_URL}/productos`);
@@ -260,7 +354,112 @@
             } catch (error) {
                 console.error("Error al cargar productos:", error);
             }
+
+            try {
+                const resTodos = await fetch(`${API_URL}/productos/todos`, { headers: headersAdmin() });
+                const productosTodos = await resTodos.json();
+
+                const tbody = document.getElementById('tabla-productos');
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(productosTodos) || productosTodos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No hay productos registrados.</td></tr>';
+                    return;
+                }
+
+                productosTodos.forEach(prod => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><input type="text" id="nombre-prod-${prod.id_producto}" value="${prod.nombre}" style="width: 100%;"></td>
+                        <td><input type="number" step="0.01" id="precio-prod-${prod.id_producto}" value="${prod.precio}" style="width: 80px;"></td>
+                        <td>${prod.disponible ? '✅ Disponible' : '🚫 Deshabilitado'}</td>
+                        <td>
+                            <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarProducto(${prod.id_producto})">💾 Guardar</button>
+                            <button class="btn-del" onclick="eliminarProducto(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}')">🗑️ Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Error al cargar la tabla de productos:", error);
+            }
         }
+
+        // --- Guardar edición de producto ---
+        async function guardarProducto(id_producto) {
+            const nombre = document.getElementById(`nombre-prod-${id_producto}`).value;
+            const precio = parseFloat(document.getElementById(`precio-prod-${id_producto}`).value);
+
+            if (!nombre || isNaN(precio) || precio < 0) {
+                alert("Ingresa un nombre y un precio válidos.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/productos/${id_producto}`, {
+                    method: 'PUT',
+                    headers: headersAdmin(),
+                    body: JSON.stringify({ nombre, precio })
+                });
+
+                if (res.ok) {
+                    alert("Producto actualizado.");
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al actualizar el producto.");
+            }
+        }
+
+        // --- Eliminar (deshabilitar) producto ---
+        async function eliminarProducto(id_producto, nombre) {
+            if (!confirm(`¿Deshabilitar "${nombre}"? Ya no aparecerá en el menú del cliente.`)) return;
+
+            try {
+                const res = await fetch(`${API_URL}/productos/${id_producto}`, {
+                    method: 'DELETE',
+                    headers: headersAdmin()
+                });
+
+                if (res.ok) {
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al eliminar el producto.");
+            }
+        }
+
+        // --- Crear Producto ---
+        document.getElementById('form-producto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('nombre-producto').value;
+            const precio = parseFloat(document.getElementById('precio-producto').value);
+
+            try {
+                const res = await fetch(`${API_URL}/productos`, {
+                    method: 'POST',
+                    headers: headersAdmin(),
+                    body: JSON.stringify({ nombre, precio })
+                });
+
+                if (res.ok) {
+                    alert("Producto guardado correctamente.");
+                    document.getElementById('form-producto').reset();
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            }
+        });
 
         // --- Cargar Recetas ---
         async function cargarRecetas() {
@@ -303,7 +502,7 @@
             try {
                 const res = await fetch(`${API_URL}/recetas`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headersAdmin(),
                     body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida })
                 });
 
@@ -325,7 +524,8 @@
 
             try {
                 const res = await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: headersAdmin()
                 });
 
                 if (res.ok) {
@@ -339,10 +539,12 @@
             }
         }
 
-        // Carga Inicial
-        cargarInsumos();
-        cargarProductos();
-        cargarRecetas();
+        // La carga inicial ahora ocurre tras iniciar sesión (ver iniciarSesion) o si ya había sesión activa
+        if (sessionStorage.getItem('admin_password')) {
+            cargarInsumos();
+            cargarProductos();
+            cargarRecetas();
+        }
     </script>
 </body>
 </html>
