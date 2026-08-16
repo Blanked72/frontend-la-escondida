@@ -175,41 +175,63 @@
                 let filasItems = '';
                 items.forEach(item => {
                     const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
+                    const notaHtml = item.nota ? `<span class="nota-item">${item.nota}</span>` : '';
                     filasItems += `
                         <tr>
-                            <td>${item.cantidad}x ${item.nombre}${item.nota ? ` <em>(${item.nota})</em>` : ''}</td>
-                            <td style="text-align:right;">$${subtotal}</td>
+                            <td>${item.cantidad}x ${item.nombre}${notaHtml}</td>
+                            <td class="precio-item">$${subtotal}</td>
                         </tr>
                     `;
                 });
 
                 const infoCliente = orden.tipo_pedido !== 'mesa'
-                    ? `<p>${orden.nombre_cliente || ''} - ${orden.telefono || ''}${orden.direccion ? '<br>' + orden.direccion : ''}</p>`
+                    ? `<div class="info-cliente-ticket">${orden.nombre_cliente || ''} · ${orden.telefono || ''}${orden.direccion ? '<br>' + orden.direccion : ''}</div>`
                     : '';
 
-                const ventana = window.open('', '_blank', 'width=350,height=600');
+                const fechaImpresion = new Date().toLocaleString('es-MX', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                // URL absoluta del logo (la ventana de impresión no hereda la ruta de la página actual)
+                const logoUrl = new URL('logo.png', window.location.href).href;
+
+                const ventana = window.open('', '_blank', 'width=380,height=650');
                 ventana.document.write(`
                     <html>
                     <head>
                         <title>Ticket Orden #${orden.numero_dia}</title>
                         <style>
-                            body { font-family: monospace; padding: 15px; }
-                            h2 { text-align: center; margin-bottom: 5px; }
-                            p { text-align: center; margin: 2px 0; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                            td { padding: 4px 0; }
-                            .linea { border-top: 1px dashed #000; margin: 10px 0; }
-                            .total-final { font-size: 1.2rem; font-weight: bold; text-align: right; margin-top: 10px; }
+                            * { box-sizing: border-box; }
+                            body { font-family: 'Courier New', monospace; color: #222; width: 300px; margin: 0 auto; padding: 20px 15px; }
+                            .logo-ticket { display: block; margin: 0 auto 10px; height: 85px; }
+                            .nombre-negocio { text-align: center; font-family: Arial, sans-serif; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; margin: 0; }
+                            .subtitulo { text-align: center; font-family: Arial, sans-serif; font-size: 0.8rem; color: #777; margin: 2px 0 12px; }
+                            .info-orden { text-align: center; font-size: 1rem; font-weight: bold; margin: 6px 0 2px; }
+                            .fecha-ticket { text-align: center; font-size: 0.8rem; color: #666; margin: 0 0 6px; }
+                            .info-cliente-ticket { text-align: center; font-size: 0.85rem; color: #333; margin: 4px 0; }
+                            .linea { border-top: 1px dashed #999; margin: 12px 0; }
+                            table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+                            td { padding: 6px 0; vertical-align: top; }
+                            .precio-item { text-align: right; white-space: nowrap; padding-left: 10px; }
+                            .nota-item { display: block; font-style: italic; color: #777; font-size: 0.78rem; margin-top: 2px; }
+                            .fila-total { display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 1.25rem; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 2px solid #222; }
+                            .footer-ticket { text-align: center; font-family: Arial, sans-serif; font-size: 0.85rem; color: #555; margin-top: 22px; }
+                            @media print { body { padding: 10px 15px; } }
                         </style>
                     </head>
                     <body>
-                        <h2>La Escondida</h2>
-                        <p>Orden #${orden.numero_dia} - ${origen}</p>
+                        <img class="logo-ticket" src="${logoUrl}" alt="La Escondida">
+                        <div class="nombre-negocio">LA ESCONDIDA</div>
+                        <div class="subtitulo">Cafetería y más...</div>
+                        <div class="linea"></div>
+                        <div class="info-orden">Orden #${orden.numero_dia} · ${origen}</div>
+                        <div class="fecha-ticket">${fechaImpresion}</div>
                         ${infoCliente}
                         <div class="linea"></div>
                         <table>${filasItems}</table>
                         <div class="linea"></div>
-                        <div class="total-final">Total: $${parseFloat(orden.total).toFixed(2)}</div>
+                        <div class="fila-total"><span>TOTAL</span><span>$${parseFloat(orden.total).toFixed(2)}</span></div>
+                        <div class="footer-ticket">¡Gracias por tu preferencia! ☕</div>
                     </body>
                     </html>
                 `);
