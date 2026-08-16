@@ -6,12 +6,25 @@
     <title>La Escondida - Pedido en Línea</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; padding-bottom: 100px; }
-        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; }
-        header .logo-header { height: 70px; display: block; margin: 0 auto 8px; }
+        header { background-color: #4a2c2a; color: white; text-align: center; padding: 1.5rem 1rem; }
+        header .logo-header { height: 110px; display: block; margin: 0 auto 10px; }
         header p { margin: 0; font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
-        .container { padding: 1rem; max-width: 600px; margin: 0 auto; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
-        .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .container { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1.5rem; padding: 0.5rem 0.25rem 1.5rem; }
+        .categoria-desplegable { margin-bottom: 1rem; border: 1px solid #eee; border-radius: 10px; background: white; overflow: hidden; }
+        .titulo-categoria {
+            color: #4a2c2a;
+            background-color: #f8ede8;
+            padding: 0.9rem 1.2rem;
+            margin: 0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            list-style: none;
+        }
+        .titulo-categoria::-webkit-details-marker { display: none; }
+        .titulo-categoria::after { content: '▾'; float: right; }
+        .categoria-desplegable[open] .titulo-categoria::after { content: '▴'; }
+        .card { background: white; border-radius: 10px; padding: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
         .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
         .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
 
@@ -73,7 +86,7 @@
         </div>
 
         <h2>Nuestro Menú</h2>
-        <div id="menu-grid" class="grid">
+        <div id="menu-grid">
             <p>Cargando menú...</p>
         </div>
     </div>
@@ -99,33 +112,56 @@
 
         cargarMenu();
 
+        const ORDEN_CATEGORIAS = ['Bebidas', 'Desayunos', 'Snacks', 'Antojitos', 'Comida a la carta'];
+
         async function cargarMenu() {
             try {
                 const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/productos');
                 const productos = await respuesta.json();
 
-                const grid = document.getElementById('menu-grid');
-                grid.innerHTML = '';
+                const contenedor = document.getElementById('menu-grid');
+                contenedor.innerHTML = '';
 
                 if (productos.length === 0) {
-                    grid.innerHTML = '<p>No hay productos disponibles.</p>';
+                    contenedor.innerHTML = '<p>No hay productos disponibles.</p>';
                     return;
                 }
 
-                productos.forEach(prod => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
+                const categoriasPresentes = [...ORDEN_CATEGORIAS, ''];
+                categoriasPresentes.forEach(categoria => {
+                    const productosDeCategoria = productos.filter(p => (p.categoria || '') === categoria);
+                    if (productosDeCategoria.length === 0) return;
 
-                    const nombreSeguro = prod.nombre.replace(/'/g, "\\'");
+                    const detalles = document.createElement('details');
+                    detalles.className = 'categoria-desplegable';
+                    detalles.open = true;
 
-                    card.innerHTML =
-                        '<h3>' + prod.nombre + '</h3>' +
-                        '<p>$' + prod.precio + '</p>' +
-                        '<div class="botones-accion">' +
-                            '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
-                            '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
-                        '</div>';
-                    grid.appendChild(card);
+                    const resumen = document.createElement('summary');
+                    resumen.className = 'titulo-categoria';
+                    resumen.innerText = categoria || 'Otros';
+                    detalles.appendChild(resumen);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'grid';
+
+                    productosDeCategoria.forEach(prod => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+
+                        const nombreSeguro = prod.nombre.replace(/'/g, "\\'");
+
+                        card.innerHTML =
+                            '<h3>' + prod.nombre + '</h3>' +
+                            '<p>$' + prod.precio + '</p>' +
+                            '<div class="botones-accion">' +
+                                '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
+                                '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
+                            '</div>';
+                        grid.appendChild(card);
+                    });
+
+                    detalles.appendChild(grid);
+                    contenedor.appendChild(detalles);
                 });
             } catch (error) {
                 document.getElementById('menu-grid').innerHTML = '<p style="color:red;">Error al conectar con el servidor.</p>';
