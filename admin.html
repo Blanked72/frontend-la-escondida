@@ -135,12 +135,13 @@
                     <tr>
                         <th>Nombre</th>
                         <th>Precio</th>
+                        <th>Categoría</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-productos">
-                    <tr><td colspan="4">Cargando productos...</td></tr>
+                    <tr><td colspan="5">Cargando productos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -157,6 +158,10 @@
                     <label>Precio:</label>
                     <input type="number" step="0.01" id="precio-producto" placeholder="Ej. 35.00" required>
                 </div>
+                <div class="form-group">
+                    <label>Categoría:</label>
+                    <select id="categoria-producto" required></select>
+                </div>
                 <button type="submit" class="btn-submit">Guardar Producto</button>
             </form>
         </div>
@@ -166,6 +171,17 @@
 
     <script>
         const API_URL = 'https://backend-la-escondida.onrender.com/api';
+        const CATEGORIAS = ['Bebidas', 'Desayunos', 'Snacks', 'Antojitos', 'Comida a la carta'];
+
+        function opcionesCategoria(seleccionada) {
+            let html = '<option value="">Sin categoría</option>';
+            CATEGORIAS.forEach(cat => {
+                html += `<option value="${cat}" ${cat === seleccionada ? 'selected' : ''}>${cat}</option>`;
+            });
+            return html;
+        }
+
+        document.getElementById('categoria-producto').innerHTML = opcionesCategoria();
 
         // --- Login ---
         function headersAdmin() {
@@ -365,7 +381,7 @@
                 tbody.innerHTML = '';
 
                 if (!Array.isArray(productosTodos) || productosTodos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No hay productos registrados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">No hay productos registrados.</td></tr>';
                     return;
                 }
 
@@ -374,6 +390,7 @@
                     tr.innerHTML = `
                         <td><input type="text" id="nombre-prod-${prod.id_producto}" value="${prod.nombre}" style="width: 100%;"></td>
                         <td><input type="number" step="0.01" id="precio-prod-${prod.id_producto}" value="${prod.precio}" style="width: 80px;"></td>
+                        <td><select id="categoria-prod-${prod.id_producto}">${opcionesCategoria(prod.categoria)}</select></td>
                         <td>${prod.disponible ? '✅ Disponible' : '🚫 Deshabilitado'}</td>
                         <td>
                             <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarProducto(${prod.id_producto})">💾 Guardar</button>
@@ -391,6 +408,7 @@
         async function guardarProducto(id_producto) {
             const nombre = document.getElementById(`nombre-prod-${id_producto}`).value;
             const precio = parseFloat(document.getElementById(`precio-prod-${id_producto}`).value);
+            const categoria = document.getElementById(`categoria-prod-${id_producto}`).value;
 
             if (!nombre || isNaN(precio) || precio < 0) {
                 alert("Ingresa un nombre y un precio válidos.");
@@ -401,7 +419,7 @@
                 const res = await fetch(`${API_URL}/productos/${id_producto}`, {
                     method: 'PUT',
                     headers: headersAdmin(),
-                    body: JSON.stringify({ nombre, precio })
+                    body: JSON.stringify({ nombre, precio, categoria })
                 });
 
                 if (res.ok) {
@@ -442,12 +460,13 @@
             e.preventDefault();
             const nombre = document.getElementById('nombre-producto').value;
             const precio = parseFloat(document.getElementById('precio-producto').value);
+            const categoria = document.getElementById('categoria-producto').value;
 
             try {
                 const res = await fetch(`${API_URL}/productos`, {
                     method: 'POST',
                     headers: headersAdmin(),
-                    body: JSON.stringify({ nombre, precio })
+                    body: JSON.stringify({ nombre, precio, categoria })
                 });
 
                 if (res.ok) {
