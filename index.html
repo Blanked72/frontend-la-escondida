@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Escondida - Pedido en Línea</title>
+    <title>La Escondida - Menú</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; padding-bottom: 100px; }
         header { background-color: #4a2c2a; color: white; text-align: center; padding: 1rem; }
@@ -15,30 +15,28 @@
         .card { background: white; border-radius: 10px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
         .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
         .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
-
+        
+        /* Contenedor para los botones lado a lado */
         .botones-accion { display: flex; gap: 10px; justify-content: space-between; margin-top: 10px; }
-        .btn-add, .btn-remove {
-            color: white;
-            border: none;
-            padding: 0.6rem;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
+        .btn-add, .btn-remove { 
+            color: white; 
+            border: none; 
+            padding: 0.6rem; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: bold; 
             font-size: 1.2rem;
         }
         .btn-add { background-color: #27ae60; }
         .btn-remove { background-color: #e74c3c; }
 
-        .datos-cliente { background: white; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .datos-cliente h2 { margin-top: 0; font-size: 1.2rem; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
-        .form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
-        #campo-direccion { display: none; }
-
         .cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
         .btn-order { background-color: #d35400; color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 5px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+        .pantalla-bloqueo { text-align: center; padding: 50px 20px; margin-top: 20px; }
+        .pantalla-bloqueo h1 { font-size: 4rem; margin: 0; }
+        .pantalla-bloqueo h2 { color: #c0392b; }
+        .pantalla-bloqueo p { font-size: 1.2rem; color: #555; }
     </style>
 </head>
 <body>
@@ -46,33 +44,10 @@
     <header>
         <img src="logo.png" alt="La Escondida" class="logo-header">
         <h1>La Escondida</h1>
-        <p>Pedido en línea</p>
+        <p id="info-mesa">Buscando mesa...</p>
     </header>
 
     <div class="container">
-        <div class="datos-cliente">
-            <h2>📋 Tus datos</h2>
-            <div class="form-group">
-                <label>¿Cómo quieres tu pedido?</label>
-                <select id="tipo-pedido">
-                    <option value="recoger">🛍️ Recoger en tienda</option>
-                    <option value="domicilio">🚚 Entrega a domicilio</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Nombre:</label>
-                <input type="text" id="nombre-cliente" placeholder="Tu nombre" required>
-            </div>
-            <div class="form-group">
-                <label>Teléfono:</label>
-                <input type="text" id="telefono-cliente" placeholder="Tu teléfono" required>
-            </div>
-            <div class="form-group" id="campo-direccion">
-                <label>Dirección de entrega:</label>
-                <input type="text" id="direccion-cliente" placeholder="Calle, número, colonia...">
-            </div>
-        </div>
-
         <h2>Nuestro Menú</h2>
         <div id="menu-grid">
             <p>Cargando menú...</p>
@@ -84,21 +59,27 @@
             <strong style="font-size: 1.2rem;">Total: $<span id="total">0.00</span></strong>
             <p style="margin: 0; color: #666;" id="items-count">0 artículos</p>
         </div>
-        <button class="btn-order" onclick="enviarOrden()">Enviar Pedido</button>
+        <button class="btn-order" onclick="enviarOrden()">Enviar Orden</button>
     </div>
 
     <script>
         let carrito = [];
         let total = 0;
 
-        const selectTipoPedido = document.getElementById('tipo-pedido');
-        const campoDireccion = document.getElementById('campo-direccion');
+        const parametrosURL = new URLSearchParams(window.location.search);
+        const numeroMesa = parametrosURL.get('mesa');
 
-        selectTipoPedido.addEventListener('change', () => {
-            campoDireccion.style.display = selectTipoPedido.value === 'domicilio' ? 'block' : 'none';
-        });
-
-        cargarMenu();
+        if (!numeroMesa) {
+            document.body.innerHTML = 
+                '<div class="pantalla-bloqueo">' +
+                    '<h1>📱</h1>' +
+                    '<h2>Escanea tu Código QR</h2>' +
+                    '<p>Por favor, escanea el código QR de tu mesa para poder hacer tu pedido.</p>' +
+                '</div>';
+        } else {
+            document.getElementById('info-mesa').innerText = 'Ordenando desde: Mesa ' + numeroMesa;
+            cargarMenu();
+        }
 
         const ORDEN_CATEGORIAS = ['Bebidas', 'Desayunos', 'Snacks', 'Antojitos', 'Comida a la carta'];
 
@@ -106,15 +87,16 @@
             try {
                 const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/productos');
                 const productos = await respuesta.json();
-
+                
                 const contenedor = document.getElementById('menu-grid');
-                contenedor.innerHTML = '';
+                contenedor.innerHTML = ''; 
 
-                if (productos.length === 0) {
+                if(productos.length === 0) {
                     contenedor.innerHTML = '<p>No hay productos disponibles.</p>';
                     return;
                 }
 
+                // Agrupamos por categoría; los productos sin categoría van al final
                 const categoriasPresentes = [...ORDEN_CATEGORIAS, ''];
                 categoriasPresentes.forEach(categoria => {
                     const productosDeCategoria = productos.filter(p => (p.categoria || '') === categoria);
@@ -132,6 +114,7 @@
                         const card = document.createElement('div');
                         card.className = 'card';
 
+                        // Aseguramos que si el nombre tiene comillas no rompa el código
                         const nombreSeguro = prod.nombre.replace(/'/g, "\\'");
 
                         card.innerHTML =
@@ -163,8 +146,9 @@
         }
 
         function quitarUnidadDelCarrito(id, precio) {
+            // Buscamos si el producto existe en el carrito
             const index = carrito.findIndex(item => item.id_producto === id);
-
+            
             if (index !== -1) {
                 carrito.splice(index, 1);
                 total -= parseFloat(precio);
@@ -178,27 +162,9 @@
                 alert("Agrega algo al carrito primero.");
                 return;
             }
-
-            const nombreCliente = document.getElementById('nombre-cliente').value.trim();
-            const telefono = document.getElementById('telefono-cliente').value.trim();
-            const tipoPedido = selectTipoPedido.value;
-            const direccion = document.getElementById('direccion-cliente').value.trim();
-
-            if (!nombreCliente || !telefono) {
-                alert("Ingresa tu nombre y teléfono para continuar.");
-                return;
-            }
-
-            if (tipoPedido === 'domicilio' && !direccion) {
-                alert("Ingresa la dirección de entrega.");
-                return;
-            }
-
+            
             const datosOrden = {
-                tipo_pedido: tipoPedido,
-                nombre_cliente: nombreCliente,
-                telefono: telefono,
-                direccion: tipoPedido === 'domicilio' ? direccion : null,
+                mesa: numeroMesa,
                 total: total,
                 carrito: carrito
             };
@@ -216,21 +182,18 @@
                 const resultado = await respuesta.json();
 
                 if (resultado.id_orden) {
-                    alert('¡Pedido #' + resultado.id_orden + ' enviado con éxito!');
+                    alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
                     carrito = [];
                     total = 0;
                     actualizarTextosCarrito();
-                    document.getElementById('nombre-cliente').value = '';
-                    document.getElementById('telefono-cliente').value = '';
-                    document.getElementById('direccion-cliente').value = '';
                 } else {
-                    alert(resultado.error || "Hubo un problema al procesar el pedido.");
+                    alert("Hubo un problema al procesar la orden.");
                 }
             } catch (error) {
-                alert("Hubo un error al enviar el pedido. Intenta de nuevo.");
+                alert("Hubo un error al enviar la orden. Intenta de nuevo.");
             } finally {
                 document.querySelector('.btn-order').disabled = false;
-                document.querySelector('.btn-order').innerText = 'Enviar Pedido';
+                document.querySelector('.btn-order').innerText = 'Enviar Orden';
             }
         }
     </script>
