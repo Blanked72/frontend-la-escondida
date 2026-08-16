@@ -14,6 +14,7 @@
         .ticket.rechazada { border-left-color: #e74c3c; }
         .ticket h2 { margin: 0 0 10px 0; font-size: 1.2rem; }
         .item { font-size: 1rem; margin: 4px 0; }
+        .nota-producto { color: #c0392b; font-style: italic; font-size: 0.9rem; }
         .estado-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; color: white; margin-bottom: 10px; }
         .estado-badge.Pendiente { background-color: #f39c12; }
         .estado-badge.Lista { background-color: #27ae60; }
@@ -58,7 +59,7 @@
                             productos: []
                         };
                     }
-                    acc[fila.id_orden].productos.push({ nombre: fila.nombre_producto, cantidad: fila.cantidad });
+                    acc[fila.id_orden].productos.push({ nombre: fila.nombre_producto, cantidad: fila.cantidad, nota: fila.nota });
                     return acc;
                 }, {});
 
@@ -75,7 +76,7 @@
 
                     let htmlProductos = '';
                     orden.productos.forEach(prod => {
-                        htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}</div>`;
+                        htmlProductos += `<div class="item">👉 ${prod.cantidad}x ${prod.nombre}${prod.nota ? ` <span class="nota-producto">(${prod.nota})</span>` : ''}</div>`;
                     });
 
                     const htmlMotivoRechazo = orden.estado === 'Rechazada'

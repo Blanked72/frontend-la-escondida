@@ -177,7 +177,7 @@
                     const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
                     filasItems += `
                         <tr>
-                            <td>${item.cantidad}x ${item.nombre}</td>
+                            <td>${item.cantidad}x ${item.nombre}${item.nota ? ` <em>(${item.nota})</em>` : ''}</td>
                             <td style="text-align:right;">$${subtotal}</td>
                         </tr>
                     `;

@@ -212,7 +212,7 @@
                 let filas = '';
                 datos.items.forEach(item => {
                     const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
-                    filas += `<tr><td>${item.cantidad}x ${item.nombre}</td><td style="text-align:right;">$${subtotal}</td></tr>`;
+                    filas += `<tr><td>${item.cantidad}x ${item.nombre}${item.nota ? ` <em>(${item.nota})</em>` : ''}</td><td style="text-align:right;">$${subtotal}</td></tr>`;
                 });
 
                 contenido.innerHTML = `
