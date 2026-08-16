@@ -57,10 +57,11 @@
                         <th>Stock Actual</th>
                         <th>Stock Mínimo</th>
                         <th>Ajustar Stock</th>
+                        <th>Eliminar</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-insumos">
-                    <tr><td colspan="4">Cargando insumos...</td></tr>
+                    <tr><td colspan="5">Cargando insumos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -240,7 +241,7 @@
                 selectInsumo.innerHTML = '<option value="">Selecciona un insumo...</option>';
 
                 if (insumos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No hay insumos registrados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">No hay insumos registrados.</td></tr>';
                     return;
                 }
 
@@ -248,7 +249,10 @@
                     // Llenar Tabla
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><strong>${insumo.nombre}</strong></td>
+                        <td>
+                            <input type="text" id="nombre-insumo-${insumo.id_insumo}" value="${insumo.nombre}" style="width: 120px;">
+                            <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarNombreInsumo(${insumo.id_insumo})">💾</button>
+                        </td>
                         <td>${insumo.cantidad_actual}</td>
                         <td>
                             <input type="number" step="0.001" id="minimo-${insumo.id_insumo}" value="${insumo.stock_minimo ?? 5}" style="width: 70px;">
@@ -257,6 +261,9 @@
                         <td>
                             <button class="btn-add" onclick="modificarStock(${insumo.id_insumo}, '${insumo.nombre}', false)">➕ Sumar</button>
                             <button class="btn-sub" onclick="modificarStock(${insumo.id_insumo}, '${insumo.nombre}', true)">➖ Restar</button>
+                        </td>
+                        <td>
+                            <button class="btn-del" onclick="eliminarInsumo(${insumo.id_insumo}, '${insumo.nombre.replace(/'/g, "\\'")}')">🗑️</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -269,6 +276,54 @@
                 });
             } catch (error) {
                 console.error("Error al cargar insumos:", error);
+            }
+        }
+
+        // --- Guardar nombre editado de un insumo ---
+        async function guardarNombreInsumo(id_insumo) {
+            const nombre = document.getElementById(`nombre-insumo-${id_insumo}`).value.trim();
+            if (!nombre) {
+                alert("El nombre no puede estar vacío.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/insumos/${id_insumo}`, {
+                    method: 'PUT',
+                    headers: headersAdmin(),
+                    body: JSON.stringify({ nombre })
+                });
+
+                if (res.ok) {
+                    alert("Nombre actualizado.");
+                    cargarInsumos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al actualizar el nombre.");
+            }
+        }
+
+        // --- Eliminar insumo ---
+        async function eliminarInsumo(id_insumo, nombre) {
+            if (!confirm(`¿Eliminar el insumo "${nombre}"? Esta acción no se puede deshacer.`)) return;
+
+            try {
+                const res = await fetch(`${API_URL}/insumos/${id_insumo}`, {
+                    method: 'DELETE',
+                    headers: headersAdmin()
+                });
+
+                if (res.ok) {
+                    cargarInsumos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al eliminar el insumo.");
             }
         }
 
@@ -392,6 +447,10 @@
 
                 productosTodos.forEach(prod => {
                     idsProductosTabla.push(prod.id_producto);
+                    const botonDisponibilidad = prod.disponible
+                        ? `<button class="btn-del" onclick="cambiarDisponibilidad(${prod.id_producto}, false, '${prod.nombre.replace(/'/g, "\\'")}')">🚫 Deshabilitar</button>`
+                        : `<button class="btn-add" onclick="cambiarDisponibilidad(${prod.id_producto}, true, '${prod.nombre.replace(/'/g, "\\'")}')">✅ Habilitar</button>`;
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><input type="text" id="nombre-prod-${prod.id_producto}" value="${prod.nombre}" style="width: 100%;"></td>
@@ -400,7 +459,7 @@
                         <td>${prod.disponible ? '✅ Disponible' : '🚫 Deshabilitado'}</td>
                         <td>
                             <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarProducto(${prod.id_producto})">💾 Guardar</button>
-                            <button class="btn-del" onclick="eliminarProducto(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}')">🗑️ Eliminar</button>
+                            ${botonDisponibilidad}
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -464,14 +523,16 @@
             cargarProductos();
         }
 
-        // --- Eliminar (deshabilitar) producto ---
-        async function eliminarProducto(id_producto, nombre) {
-            if (!confirm(`¿Deshabilitar "${nombre}"? Ya no aparecerá en el menú del cliente.`)) return;
+        // --- Habilitar / deshabilitar producto (reversible) ---
+        async function cambiarDisponibilidad(id_producto, disponible, nombre) {
+            const accion = disponible ? 'habilitar' : 'deshabilitar';
+            if (!confirm(`¿Deseas ${accion} "${nombre}"?`)) return;
 
             try {
-                const res = await fetch(`${API_URL}/productos/${id_producto}`, {
-                    method: 'DELETE',
-                    headers: headersAdmin()
+                const res = await fetch(`${API_URL}/productos/${id_producto}/disponibilidad`, {
+                    method: 'PUT',
+                    headers: headersAdmin(),
+                    body: JSON.stringify({ disponible })
                 });
 
                 if (res.ok) {
@@ -481,7 +542,7 @@
                     alert(`Error: ${err.error}`);
                 }
             } catch (error) {
-                alert("Error de conexión al eliminar el producto.");
+                alert("Error de conexión al actualizar la disponibilidad.");
             }
         }
 
