@@ -14,6 +14,8 @@
         .cantidad { font-size: 2.5rem; font-weight: bold; color: #e67e22; margin: 10px 0; }
         .card.stock-bajo { border-left-color: #e74c3c; }
         .card.stock-bajo .cantidad { color: #e74c3c; }
+        .card.stock-ok { border-left-color: #27ae60; }
+        .card.stock-ok .cantidad { color: #27ae60; }
         .banner-alerta { background-color: #fdecea; color: #c0392b; border: 2px solid #e74c3c; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-weight: bold; text-align: center; }
         .btn-actualizar { display: block; margin: 3rem auto 0; background-color: #34495e; color: white; border: none; padding: 12px 25px; font-size: 1.1rem; border-radius: 5px; cursor: pointer; }
         .btn-actualizar:hover { background-color: #2c3e50; }
@@ -37,13 +39,19 @@
 
     <script>
         // En celulares el navegador bloquea el audio hasta que el usuario toca la pantalla,
-        // por eso el AudioContext se crea con el botón "Activar sonido" y se reutiliza aquí.
+        // por eso el AudioContext se crea y el audio se precarga con el botón "Activar sonido".
         let contextoAudio = null;
+        let bufferSonidoAlerta = null;
 
-        function activarSonido() {
+        async function activarSonido() {
             try {
                 contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
                 contextoAudio.resume();
+
+                const respuesta = await fetch('alerta.mp3');
+                const datosArray = await respuesta.arrayBuffer();
+                bufferSonidoAlerta = await contextoAudio.decodeAudioData(datosArray);
+
                 const boton = document.getElementById('btn-activar-sonido');
                 boton.innerText = '🔔 Sonido activado';
                 boton.disabled = true;
@@ -53,37 +61,12 @@
         }
 
         function reproducirSonidoAlerta() {
-            if (!contextoAudio) return; // El usuario aún no presionó "Activar sonido"
+            if (!contextoAudio || !bufferSonidoAlerta) return; // El usuario aún no presionó "Activar sonido"
 
             try {
-                const duracion = 0.5;
-                const bufferSize = contextoAudio.sampleRate * duracion;
-                const buffer = contextoAudio.createBuffer(1, bufferSize, contextoAudio.sampleRate);
-                const datos = buffer.getChannelData(0);
-
-                // Ruido blanco con caída rápida = "chasquido"
-                for (let i = 0; i < bufferSize; i++) {
-                    datos[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
-                }
-
                 const fuente = contextoAudio.createBufferSource();
-                fuente.buffer = buffer;
-
-                // Filtro que baja de agudo a grave para simular el "crack" del látigo
-                const filtro = contextoAudio.createBiquadFilter();
-                filtro.type = 'bandpass';
-                filtro.frequency.setValueAtTime(3500, contextoAudio.currentTime);
-                filtro.frequency.exponentialRampToValueAtTime(400, contextoAudio.currentTime + duracion);
-                filtro.Q.value = 1;
-
-                const volumen = contextoAudio.createGain();
-                volumen.gain.setValueAtTime(1, contextoAudio.currentTime);
-                volumen.gain.exponentialRampToValueAtTime(0.01, contextoAudio.currentTime + duracion);
-
-                fuente.connect(filtro);
-                filtro.connect(volumen);
-                volumen.connect(contextoAudio.destination);
-
+                fuente.buffer = bufferSonidoAlerta;
+                fuente.connect(contextoAudio.destination);
                 fuente.start();
             } catch (error) {
                 console.error("No se pudo reproducir el sonido de alerta:", error);
@@ -111,12 +94,12 @@
                     const nombre = insumo.nombre || 'Insumo Desconocido';
                     const cantidad = insumo.cantidad_actual || 0;
                     const minimo = insumo.stock_minimo ?? 5;
-                    const esBajo = cantidad <= minimo;
+                    const esBajo = cantidad < minimo;
 
                     if (esBajo) insumosBajos.push(nombre);
 
                     const card = document.createElement('div');
-                    card.className = esBajo ? 'card stock-bajo' : 'card';
+                    card.className = esBajo ? 'card stock-bajo' : 'card stock-ok';
                     card.innerHTML = `
                         <h3>${nombre}</h3>
                         <div class="cantidad">${cantidad}</div>

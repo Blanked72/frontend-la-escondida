@@ -176,7 +176,7 @@
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>#${c.id_orden}</td>
+                        <td>#${c.numero_dia}</td>
                         <td>${c.hora}</td>
                         <td>${origen}</td>
                         <td><strong>$${parseFloat(c.total).toFixed(2)}</strong></td>
@@ -194,7 +194,7 @@
         async function verDetalleOrden(id_orden) {
             const modal = document.getElementById('modal-detalle');
             const contenido = document.getElementById('modal-contenido');
-            document.getElementById('modal-titulo').innerText = `Orden #${id_orden}`;
+            document.getElementById('modal-titulo').innerText = 'Detalle de la orden';
             contenido.innerHTML = 'Cargando...';
             modal.style.display = 'flex';
 
@@ -206,6 +206,8 @@
                     contenido.innerHTML = `<p>${datos.error || 'No se pudo cargar el detalle.'}</p>`;
                     return;
                 }
+
+                document.getElementById('modal-titulo').innerText = `Orden #${datos.orden.numero_dia}`;
 
                 let filas = '';
                 datos.items.forEach(item => {

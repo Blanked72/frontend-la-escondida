@@ -46,6 +46,7 @@
                 const ordenesAgrupadas = datos.reduce((acc, fila) => {
                     if (!acc[fila.id_orden]) {
                         acc[fila.id_orden] = {
+                            numeroDia: fila.numero_dia,
                             mesa: fila.numero_mesa,
                             estado: fila.estado,
                             total: fila.total,
@@ -88,7 +89,7 @@
                     const ticket = document.createElement('div');
                     ticket.className = claseTicket;
                     ticket.innerHTML = `
-                        <h2>Orden #${id_orden} - ${origen}</h2>
+                        <h2>Orden #${orden.numeroDia} - ${origen}</h2>
                         <span class="estado-badge ${orden.estado}">${orden.estado}</span>
                         ${htmlInfoCliente}
                         ${htmlProductos}

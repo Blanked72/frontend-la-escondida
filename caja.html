@@ -62,7 +62,7 @@
                     if (orden.estado === 'Rechazada') {
                         ticket.className = 'ticket rechazada';
                         ticket.innerHTML = `
-                            <h2>Orden #${orden.id_orden} - ${origen}</h2>
+                            <h2>Orden #${orden.numero_dia} - ${origen}</h2>
                             ${htmlInfoCliente}
                             <div class="motivo-rechazo">⚠️ Cocina no pudo prepararla: ${orden.motivo_rechazo || 'Falta de insumo'}</div>
                             <button class="btn-notificado" onclick="notificarRechazo(${orden.id_orden})">
@@ -72,7 +72,7 @@
                     } else {
                         ticket.className = 'ticket';
                         ticket.innerHTML = `
-                            <h2>Orden #${orden.id_orden} - ${origen}</h2>
+                            <h2>Orden #${orden.numero_dia} - ${origen}</h2>
                             ${htmlInfoCliente}
                             <div class="total">Total: $${orden.total}</div>
                             <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
@@ -191,7 +191,7 @@
                 ventana.document.write(`
                     <html>
                     <head>
-                        <title>Ticket Orden #${id_orden}</title>
+                        <title>Ticket Orden #${orden.numero_dia}</title>
                         <style>
                             body { font-family: monospace; padding: 15px; }
                             h2 { text-align: center; margin-bottom: 5px; }
@@ -204,7 +204,7 @@
                     </head>
                     <body>
                         <h2>La Escondida</h2>
-                        <p>Orden #${id_orden} - ${origen}</p>
+                        <p>Orden #${orden.numero_dia} - ${origen}</p>
                         ${infoCliente}
                         <div class="linea"></div>
                         <table>${filasItems}</table>
