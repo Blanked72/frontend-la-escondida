@@ -93,7 +93,7 @@
                 insumos.forEach(insumo => {
                     const nombre = insumo.nombre || 'Insumo Desconocido';
                     const cantidad = insumo.cantidad_actual || 0;
-                    const minimo = insumo.stock_minimo ?? 5;
+                    const minimo = insumo.stock_minimo ?? ;
                     const esBajo = cantidad < minimo;
 
                     if (esBajo) insumosBajos.push(nombre);
