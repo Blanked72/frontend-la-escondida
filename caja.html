@@ -201,8 +201,9 @@
                     <head>
                         <title>Ticket Orden #${orden.numero_dia}</title>
                         <style>
+                            @page { size: 80mm auto; margin: 0; }
                             * { box-sizing: border-box; }
-                            body { font-family: 'Courier New', monospace; color: #222; width: 300px; margin: 0 auto; padding: 20px 15px; }
+                            body { font-family: 'Courier New', monospace; color: #222; width: 76mm; margin: 0 auto; padding: 4mm 3mm; }
                             .logo-ticket { display: block; margin: 0 auto 10px; height: 85px; }
                             .nombre-negocio { text-align: center; font-family: Arial, sans-serif; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; margin: 0; }
                             .subtitulo { text-align: center; font-family: Arial, sans-serif; font-size: 0.8rem; color: #777; margin: 2px 0 12px; }
@@ -215,8 +216,8 @@
                             .precio-item { text-align: right; white-space: nowrap; padding-left: 10px; }
                             .nota-item { display: block; font-style: italic; color: #777; font-size: 0.78rem; margin-top: 2px; }
                             .fila-total { display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 1.25rem; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 2px solid #222; }
-                            .footer-ticket { text-align: center; font-family: Arial, sans-serif; font-size: 0.85rem; color: #555; margin-top: 22px; }
-                            @media print { body { padding: 10px 15px; } }
+                            .footer-ticket { text-align: center; font-family: Arial, sans-serif; font-size: 0.85rem; color: #555; margin-top: 22px; margin-bottom: 0; }
+                            @media print { body { padding: 4mm 3mm; } }
                         </style>
                     </head>
                     <body>
@@ -236,6 +237,11 @@
                     </html>
                 `);
                 ventana.document.close();
+
+                // Cerramos la ventana sola al terminar de imprimir (o al cancelar),
+                // para que el siguiente ticket abra una ventana limpia
+                ventana.onafterprint = () => ventana.close();
+                ventana.focus();
                 ventana.print();
             } catch (error) {
                 alert("Hubo un error al generar el ticket.");
