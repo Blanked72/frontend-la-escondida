@@ -10,21 +10,33 @@
         header .logo-header { height: 110px; display: block; margin: 0 auto 10px; }
         header p { margin: 0; font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
         .container { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+
+        .nav-categorias { position: sticky; top: 0; z-index: 10; background: #f4f4f9; padding: 0.9rem 0.5rem; display: flex; gap: 0.6rem; overflow-x: auto; -webkit-overflow-scrolling: touch; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+        .nav-categorias::-webkit-scrollbar { display: none; }
+        .chip-categoria { flex: 0 0 auto; background: white; border: 2px solid #f1d9c8; color: #4a2c2a; border-radius: 30px; padding: 0.5rem 1rem; font-size: 0.95rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.15s ease; }
+        .chip-categoria:hover { background: #f8ede8; }
+        .chip-categoria.activo { background: #d35400; border-color: #d35400; color: white; }
+
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1.5rem; padding: 0.5rem 0.25rem 1.5rem; }
-        .categoria-desplegable { margin-bottom: 1rem; border: 1px solid #eee; border-radius: 10px; background: white; overflow: hidden; }
+        .categoria-desplegable { margin-bottom: 1rem; border: 1px solid #eee; border-radius: 10px; background: white; overflow: hidden; scroll-margin-top: 70px; }
         .titulo-categoria {
             color: #4a2c2a;
             background-color: #f8ede8;
-            padding: 0.9rem 1.2rem;
+            padding: 1rem 1.2rem;
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.25rem;
+            font-weight: bold;
             cursor: pointer;
             list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .titulo-categoria::-webkit-details-marker { display: none; }
-        .titulo-categoria::after { content: '▾'; float: right; }
-        .categoria-desplegable[open] .titulo-categoria::after { content: '▴'; }
-        .card { background: white; border-radius: 10px; padding: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .flecha-categoria { transition: transform 0.2s ease; color: #d35400; }
+        .categoria-desplegable[open] .flecha-categoria { transform: rotate(180deg); }
+        .card { background: white; border-radius: 10px; padding: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); }
         .card h3 { margin: 0.5rem 0; font-size: 1.1rem; color: #333; }
         .card p { color: #d35400; font-weight: bold; font-size: 1.2rem; margin: 0.5rem 0; }
 
@@ -87,6 +99,7 @@
         </div>
 
         <h2>Nuestro Menú</h2>
+        <div id="nav-categorias" class="nav-categorias"></div>
         <div id="menu-grid">
             <p>Cargando menú...</p>
         </div>
@@ -114,6 +127,24 @@
         cargarMenu();
 
         const ORDEN_CATEGORIAS = ['Bebidas', 'Desayunos', 'Snacks', 'Antojitos', 'Comida a la carta'];
+        const ICONOS_CATEGORIA = {
+            'Bebidas': '☕',
+            'Desayunos': '🍳',
+            'Snacks': '🥨',
+            'Antojitos': '🌮',
+            'Comida a la carta': '🍽️',
+            '': '📋'
+        };
+
+        function irACategoria(idSeccion, chipActivo) {
+            document.querySelectorAll('.categoria-desplegable').forEach(det => {
+                det.open = (det.id === idSeccion);
+            });
+            document.querySelectorAll('.chip-categoria').forEach(c => c.classList.remove('activo'));
+            chipActivo.classList.add('activo');
+
+            document.getElementById(idSeccion).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         async function cargarMenu() {
             try {
@@ -121,7 +152,9 @@
                 const productos = await respuesta.json();
 
                 const contenedor = document.getElementById('menu-grid');
+                const nav = document.getElementById('nav-categorias');
                 contenedor.innerHTML = '';
+                nav.innerHTML = '';
 
                 if (productos.length === 0) {
                     contenedor.innerHTML = '<p>No hay productos disponibles.</p>';
@@ -129,17 +162,29 @@
                 }
 
                 const categoriasPresentes = [...ORDEN_CATEGORIAS, ''];
-                categoriasPresentes.forEach(categoria => {
+                categoriasPresentes.forEach((categoria, indice) => {
                     const productosDeCategoria = productos.filter(p => (p.categoria || '') === categoria);
                     if (productosDeCategoria.length === 0) return;
 
+                    const idSeccion = `categoria-${indice}`;
+                    const icono = ICONOS_CATEGORIA[categoria] || '📋';
+                    const nombreCategoria = categoria || 'Otros';
+
+                    const chip = document.createElement('button');
+                    chip.className = 'chip-categoria';
+                    chip.type = 'button';
+                    chip.innerText = `${icono} ${nombreCategoria}`;
+                    chip.onclick = () => irACategoria(idSeccion, chip);
+                    nav.appendChild(chip);
+
                     const detalles = document.createElement('details');
                     detalles.className = 'categoria-desplegable';
-                    detalles.open = true;
+                    detalles.id = idSeccion;
+                    detalles.open = false;
 
                     const resumen = document.createElement('summary');
                     resumen.className = 'titulo-categoria';
-                    resumen.innerText = categoria || 'Otros';
+                    resumen.innerHTML = `<span>${icono} ${nombreCategoria}</span><span class="flecha-categoria">▾</span>`;
                     detalles.appendChild(resumen);
 
                     const grid = document.createElement('div');
