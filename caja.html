@@ -202,21 +202,21 @@
                         <title>Ticket Orden #${orden.numero_dia}</title>
                         <style>
                             @page { size: 80mm auto; margin: 0; }
-                            * { box-sizing: border-box; }
-                            body { font-family: 'Courier New', monospace; color: #222; width: 76mm; margin: 0 auto; padding: 4mm 3mm; }
+                            * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            body { font-family: 'Courier New', monospace; color: #000; width: 76mm; margin: 0 auto; padding: 4mm 3mm; }
                             .logo-ticket { display: block; margin: 0 auto 10px; height: 85px; }
-                            .nombre-negocio { text-align: center; font-family: Arial, sans-serif; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; margin: 0; }
-                            .subtitulo { text-align: center; font-family: Arial, sans-serif; font-size: 0.8rem; color: #777; margin: 2px 0 12px; }
-                            .info-orden { text-align: center; font-size: 1rem; font-weight: bold; margin: 6px 0 2px; }
-                            .fecha-ticket { text-align: center; font-size: 0.8rem; color: #666; margin: 0 0 6px; }
-                            .info-cliente-ticket { text-align: center; font-size: 0.85rem; color: #333; margin: 4px 0; }
-                            .linea { border-top: 1px dashed #999; margin: 12px 0; }
-                            table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-                            td { padding: 6px 0; vertical-align: top; }
+                            .nombre-negocio { text-align: center; font-family: Arial, sans-serif; font-size: 1.3rem; font-weight: bold; letter-spacing: 1px; margin: 0; color: #000; }
+                            .subtitulo { text-align: center; font-family: Arial, sans-serif; font-size: 0.8rem; color: #000; margin: 2px 0 12px; }
+                            .info-orden { text-align: center; font-size: 1rem; font-weight: bold; margin: 6px 0 2px; color: #000; }
+                            .fecha-ticket { text-align: center; font-size: 0.8rem; color: #000; margin: 0 0 6px; }
+                            .info-cliente-ticket { text-align: center; font-size: 0.85rem; color: #000; margin: 4px 0; font-weight: bold; }
+                            .linea { border-top: 2px dashed #000; margin: 12px 0; }
+                            table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+                            td { padding: 6px 0; vertical-align: top; color: #000; font-weight: bold; }
                             .precio-item { text-align: right; white-space: nowrap; padding-left: 10px; }
-                            .nota-item { display: block; font-style: italic; color: #777; font-size: 0.78rem; margin-top: 2px; }
-                            .fila-total { display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 1.25rem; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 2px solid #222; }
-                            .footer-ticket { text-align: center; font-family: Arial, sans-serif; font-size: 0.85rem; color: #555; margin-top: 22px; margin-bottom: 0; }
+                            .nota-item { display: block; font-style: italic; color: #000; font-size: 0.78rem; margin-top: 2px; font-weight: normal; }
+                            .fila-total { display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 1.25rem; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 3px solid #000; color: #000; }
+                            .footer-ticket { text-align: center; font-family: Arial, sans-serif; font-size: 0.85rem; color: #000; margin-top: 22px; margin-bottom: 0; font-weight: bold; }
                             @media print { body { padding: 4mm 3mm; } }
                         </style>
                     </head>
