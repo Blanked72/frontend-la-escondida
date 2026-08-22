@@ -17,16 +17,58 @@
         .info-cliente { background-color: #eaf2f8; color: #2c3e50; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.95rem; }
         .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
         .btn-rechazar { background-color: #e74c3c; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
+        .btn-activar-sonido { display: block; margin: 0 auto 1.5rem; background-color: #f39c12; color: #333; border: none; padding: 12px 20px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h1><img src="logo.png" alt="La Escondida" class="logo-icon">👨‍🍳 Comandas Pendientes</h1>
+
+    <button id="btn-activar-sonido" class="btn-activar-sonido" onclick="activarSonido()">
+        🔔 Activar sonido de pedidos nuevos
+    </button>
+
     <div id="monitor" class="grid-cocina">
         <p>Buscando nuevas órdenes...</p>
     </div>
 
     <script>
+        // En celulares el navegador bloquea el audio hasta que el usuario toca la pantalla,
+        // por eso el AudioContext se crea y el audio se precarga con el botón "Activar sonido".
+        let contextoAudio = null;
+        let bufferSonidoAlerta = null;
+        let idsOrdenesConocidas = null; // null = aún no hemos cargado por primera vez
+
+        async function activarSonido() {
+            try {
+                contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
+                contextoAudio.resume();
+
+                const respuesta = await fetch('alerta.mp3');
+                const datosArray = await respuesta.arrayBuffer();
+                bufferSonidoAlerta = await contextoAudio.decodeAudioData(datosArray);
+
+                const boton = document.getElementById('btn-activar-sonido');
+                boton.innerText = '🔔 Sonido activado';
+                boton.disabled = true;
+            } catch (error) {
+                console.error("No se pudo activar el audio:", error);
+            }
+        }
+
+        function reproducirSonidoAlerta() {
+            if (!contextoAudio || !bufferSonidoAlerta) return; // El usuario aún no presionó "Activar sonido"
+
+            try {
+                const fuente = contextoAudio.createBufferSource();
+                fuente.buffer = bufferSonidoAlerta;
+                fuente.connect(contextoAudio.destination);
+                fuente.start();
+            } catch (error) {
+                console.error("No se pudo reproducir el sonido de alerta:", error);
+            }
+        }
+
         async function cargarOrdenesCocina() {
             try {
                 const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/cocina');
@@ -37,6 +79,15 @@
                 }
 
                 const datos = await respuesta.json();
+
+                // Detectar si llegó una orden nueva desde la última consulta
+                const idsActuales = new Set(datos.map(fila => fila.id_orden));
+                if (idsOrdenesConocidas !== null) {
+                    const hayOrdenNueva = [...idsActuales].some(id => !idsOrdenesConocidas.has(id));
+                    if (hayOrdenNueva) reproducirSonidoAlerta();
+                }
+                idsOrdenesConocidas = idsActuales;
+
                 const monitor = document.getElementById('monitor');
                 monitor.innerHTML = ''; 
 
