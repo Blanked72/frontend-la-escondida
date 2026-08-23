@@ -37,7 +37,6 @@
         // por eso el AudioContext se crea y el audio se precarga con el botón "Activar sonido".
         let contextoAudio = null;
         let bufferSonidoAlerta = null;
-        let idsOrdenesConocidas = null; // null = aún no hemos cargado por primera vez
 
         async function activarSonido() {
             try {
@@ -80,13 +79,8 @@
 
                 const datos = await respuesta.json();
 
-                // Detectar si llegó una orden nueva desde la última consulta
-                const idsActuales = new Set(datos.map(fila => fila.id_orden));
-                if (idsOrdenesConocidas !== null) {
-                    const hayOrdenNueva = [...idsActuales].some(id => !idsOrdenesConocidas.has(id));
-                    if (hayOrdenNueva) reproducirSonidoAlerta();
-                }
-                idsOrdenesConocidas = idsActuales;
+                // Suena mientras haya al menos una orden pendiente sin marcar como lista
+                if (datos.length > 0) reproducirSonidoAlerta();
 
                 const monitor = document.getElementById('monitor');
                 monitor.innerHTML = ''; 
