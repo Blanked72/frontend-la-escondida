@@ -247,18 +247,38 @@
             descargarCSV('historial_ventas.csv', ['Fecha', 'Ordenes Cobradas', 'Total Vendido'], filas);
         }
 
-        function exportarComandasCSV() {
+        // Trae el detalle de productos de una orden (mismo endpoint que "Ver")
+        // y lo arma como texto para meterlo en una columna del CSV.
+        async function obtenerProductosOrden(id_orden) {
+            try {
+                const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/detalle`);
+                const datos = await respuesta.json();
+                if (!respuesta.ok || !datos.items) return '';
+                return datos.items.map(item => `${item.cantidad}x ${item.nombre}`).join('; ');
+            } catch (error) {
+                console.error(`Error al obtener productos de la orden ${id_orden}:`, error);
+                return '';
+            }
+        }
+
+        async function exportarComandasCSV() {
             if (comandasCache.length === 0) {
                 alert("Primero busca las comandas de una fecha para exportar.");
                 return;
             }
-            const filas = comandasCache.map(c => [
-                c.id_orden,
-                c.hora,
-                c.tipo_pedido === 'mesa' ? `Mesa ${c.numero_mesa}` : `${c.tipo_pedido} - ${c.nombre_cliente || ''}`,
-                c.total
-            ]);
-            descargarCSV('comandas.csv', ['Orden', 'Hora', 'Origen', 'Total'], filas);
+
+            const filas = await Promise.all(comandasCache.map(async c => {
+                const productos = await obtenerProductosOrden(c.id_orden);
+                return [
+                    c.id_orden,
+                    c.hora,
+                    c.tipo_pedido === 'mesa' ? `Mesa ${c.numero_mesa}` : `${c.tipo_pedido} - ${c.nombre_cliente || ''}`,
+                    c.total,
+                    `"${productos}"`
+                ];
+            }));
+
+            descargarCSV('comandas.csv', ['Orden', 'Hora', 'Origen', 'Total', 'Productos'], filas);
         }
     </script>
 </body>
