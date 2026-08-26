@@ -48,19 +48,20 @@
 
         async function activarSonido() {
             try {
+                // Desbloqueamos la voz PRIMERO y sin await antes, para no perder
+                // la activación del usuario en navegadores mobile (Safari/Chrome).
+                if ('speechSynthesis' in window) {
+                    const prueba = new SpeechSynthesisUtterance('');
+                    window.speechSynthesis.speak(prueba);
+                    vozActivada = true;
+                }
+
                 contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
                 contextoAudio.resume();
 
                 const respuesta = await fetch('alerta-pedidos.mp3');
                 const datosArray = await respuesta.arrayBuffer();
                 bufferSonidoAlerta = await contextoAudio.decodeAudioData(datosArray);
-
-                // Desbloqueamos también la voz con la misma interacción del usuario
-                if ('speechSynthesis' in window) {
-                    const prueba = new SpeechSynthesisUtterance('');
-                    window.speechSynthesis.speak(prueba);
-                    vozActivada = true;
-                }
 
                 const boton = document.getElementById('btn-activar-sonido');
                 boton.innerText = '🔔 Sonido activado';
