@@ -60,10 +60,12 @@
                     <th>Fecha (Año-Mes-Día)</th>
                     <th>Órdenes Cobradas</th>
                     <th>Total Vendido</th>
+                    <th>Mañana (Rubí)</th>
+                    <th>Tarde (Juan Diego)</th>
                 </tr>
             </thead>
             <tbody id="tabla-historial">
-                <tr><td colspan="3">Cargando historial de ventas...</td></tr>
+                <tr><td colspan="5">Cargando historial de ventas...</td></tr>
             </tbody>
         </table>
         <button class="btn-exportar" onclick="exportarHistorialCSV()">⬇️ Exportar historial a CSV</button>
@@ -81,13 +83,14 @@
                 <tr>
                     <th>Orden</th>
                     <th>Hora</th>
+                    <th>Turno</th>
                     <th>Origen</th>
                     <th>Total</th>
                     <th>Detalle</th>
                 </tr>
             </thead>
             <tbody id="tabla-comandas">
-                <tr><td colspan="5">Elige una fecha y presiona "Ver comandas".</td></tr>
+                <tr><td colspan="6">Elige una fecha y presiona "Ver comandas".</td></tr>
             </tbody>
         </table>
         <button class="btn-exportar" onclick="exportarComandasCSV()">⬇️ Exportar comandas a CSV</button>
@@ -105,6 +108,14 @@
         const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
         let historialCache = [];
         let comandasCache = [];
+
+        // Corte de turno fijo a las 17:00. "hora" viene como texto "HH:MM" (zero-padded),
+        // así que comparar como string funciona igual que comparar como hora.
+        const HORA_CORTE_TURNO = '17:00';
+
+        function calcularTurno(hora) {
+            return hora < HORA_CORTE_TURNO ? 'Mañana (Rubí)' : 'Tarde (Juan Diego)';
+        }
 
         async function cargarReporte() {
             try {
@@ -124,7 +135,7 @@
                 tbody.innerHTML = '';
 
                 if (historialCache.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3">No hay ventas registradas en días anteriores.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">No hay ventas registradas en días anteriores.</td></tr>';
                     return;
                 }
 
@@ -134,6 +145,8 @@
                         <td><strong>${dia.fecha}</strong></td>
                         <td>${dia.total_ordenes} orden(es)</td>
                         <td><strong>$${parseFloat(dia.total_vendido).toFixed(2)}</strong></td>
+                        <td>${dia.ordenes_manana} ord. - $${parseFloat(dia.vendido_manana).toFixed(2)}</td>
+                        <td>${dia.ordenes_tarde} ord. - $${parseFloat(dia.vendido_tarde).toFixed(2)}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -156,7 +169,7 @@
                 return;
             }
 
-            tbody.innerHTML = '<tr><td colspan="4">Buscando comandas...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6">Buscando comandas...</td></tr>';
 
             try {
                 const respuesta = await fetch(`${API_BASE}/comandas?fecha=${fecha}`);
@@ -164,7 +177,7 @@
                 comandasCache = Array.isArray(comandas) ? comandas : [];
 
                 if (comandasCache.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">No hay comandas cobradas en esa fecha.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">No hay comandas cobradas en esa fecha.</td></tr>';
                     return;
                 }
 
@@ -178,6 +191,7 @@
                     tr.innerHTML = `
                         <td>#${c.numero_dia}</td>
                         <td>${c.hora}</td>
+                        <td>${calcularTurno(c.hora)}</td>
                         <td>${origen}</td>
                         <td><strong>$${parseFloat(c.total).toFixed(2)}</strong></td>
                         <td><button class="btn-detalle" onclick="verDetalleOrden(${c.id_orden})">👁️ Ver</button></td>
@@ -186,7 +200,7 @@
                 });
             } catch (error) {
                 console.error("Error al obtener comandas del día:", error);
-                tbody.innerHTML = '<tr><td colspan="5">Error al conectar con el servidor.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6">Error al conectar con el servidor.</td></tr>';
             }
         }
 
@@ -243,8 +257,20 @@
                 alert("No hay historial cargado para exportar.");
                 return;
             }
-            const filas = historialCache.map(dia => [dia.fecha, dia.total_ordenes, dia.total_vendido]);
-            descargarCSV('historial_ventas.csv', ['Fecha', 'Ordenes Cobradas', 'Total Vendido'], filas);
+            const filas = historialCache.map(dia => [
+                dia.fecha,
+                dia.total_ordenes,
+                dia.total_vendido,
+                dia.ordenes_manana,
+                dia.vendido_manana,
+                dia.ordenes_tarde,
+                dia.vendido_tarde
+            ]);
+            descargarCSV('historial_ventas.csv', [
+                'Fecha', 'Ordenes Cobradas', 'Total Vendido',
+                'Ordenes Manana (Rubi)', 'Vendido Manana (Rubi)',
+                'Ordenes Tarde (Juan Diego)', 'Vendido Tarde (Juan Diego)'
+            ], filas);
         }
 
         // Trae el detalle de productos de una orden (mismo endpoint que "Ver")
@@ -272,13 +298,14 @@
                 return [
                     c.id_orden,
                     c.hora,
+                    calcularTurno(c.hora),
                     c.tipo_pedido === 'mesa' ? `Mesa ${c.numero_mesa}` : `${c.tipo_pedido} - ${c.nombre_cliente || ''}`,
                     c.total,
                     `"${productos}"`
                 ];
             }));
 
-            descargarCSV('comandas.csv', ['Orden', 'Hora', 'Origen', 'Total', 'Productos'], filas);
+            descargarCSV('comandas.csv', ['Orden', 'Hora', 'Turno', 'Origen', 'Total', 'Productos'], filas);
         }
     </script>
 </body>
