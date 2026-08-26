@@ -54,6 +54,7 @@
         .btn-add { background-color: #27ae60; }
         .btn-remove { background-color: #e74c3c; }
         .btn-nota { background-color: #95a5a6; color: white; border: none; padding: 0.4rem; border-radius: 5px; cursor: pointer; width: 100%; font-size: 0.85rem; margin-top: 8px; }
+        .nota-resumen { color: #c0392b; font-size: 0.85rem; }
 
         .datos-cliente { background: white; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .datos-cliente h2 { margin-top: 0; font-size: 1.2rem; }
@@ -110,7 +111,16 @@
             <strong style="font-size: 1.2rem;">Total: $<span id="total">0.00</span></strong>
             <p style="margin: 0; color: #666;" id="items-count">0 artículos</p>
         </div>
-        <button class="btn-order" onclick="enviarOrden()">Enviar Pedido</button>
+        <button class="btn-order" onclick="mostrarResumenPedido()">Enviar Pedido</button>
+    </div>
+
+    <div id="modal-resumen" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:200;">
+        <div style="background:white; padding:1.5rem; border-radius:10px; width:90%; max-width:400px; max-height:75vh; overflow-y:auto;">
+            <h3 style="margin-top:0;">📋 Confirma tu pedido</h3>
+            <div id="resumen-contenido"></div>
+            <button id="btn-confirmar-envio" class="btn-order" style="width:100%; margin-top:1rem;" onclick="confirmarYEnviarOrden()">✅ Confirmar y Enviar</button>
+            <button style="width:100%; margin-top:0.5rem; background:#95a5a6; color:white; border:none; padding:0.7rem; border-radius:5px; cursor:pointer; font-weight:bold;" onclick="cerrarResumen()">✏️ Seguir editando</button>
+        </div>
     </div>
 
     <script>
@@ -245,7 +255,19 @@
             }
         }
 
-        async function enviarOrden() {
+        function agruparCarritoParaMostrar() {
+            const grupos = {};
+            carrito.forEach(item => {
+                const clave = `${item.id_producto}::${item.nota || ''}`;
+                if (!grupos[clave]) {
+                    grupos[clave] = { nombre: item.nombre, precio: item.precio, nota: item.nota, cantidad: 0 };
+                }
+                grupos[clave].cantidad += 1;
+            });
+            return Object.values(grupos);
+        }
+
+        function mostrarResumenPedido() {
             if (carrito.length === 0) {
                 alert("Agrega algo al carrito primero.");
                 return;
@@ -266,6 +288,39 @@
                 return;
             }
 
+            const items = agruparCarritoParaMostrar();
+            let filas = '';
+            items.forEach(item => {
+                const subtotal = (item.cantidad * item.precio).toFixed(2);
+                filas += `
+                    <tr>
+                        <td>${item.cantidad}x ${item.nombre}${item.nota ? `<br><em class="nota-resumen">${item.nota}</em>` : ''}</td>
+                        <td style="text-align:right; white-space:nowrap;">$${subtotal}</td>
+                    </tr>
+                `;
+            });
+
+            const origenTexto = tipoPedido === 'domicilio' ? `Entrega a domicilio: ${direccion}` : 'Recoger en tienda';
+
+            document.getElementById('resumen-contenido').innerHTML = `
+                <p style="margin:0 0 0.5rem;"><strong>${nombreCliente}</strong> · ${telefono}</p>
+                <p style="margin:0 0 1rem; color:#555;">${origenTexto}</p>
+                <table style="width:100%; border-collapse:collapse;">${filas}</table>
+                <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${total.toFixed(2)}</p>
+            `;
+            document.getElementById('modal-resumen').style.display = 'flex';
+        }
+
+        function cerrarResumen() {
+            document.getElementById('modal-resumen').style.display = 'none';
+        }
+
+        async function confirmarYEnviarOrden() {
+            const nombreCliente = document.getElementById('nombre-cliente').value.trim();
+            const telefono = document.getElementById('telefono-cliente').value.trim();
+            const tipoPedido = selectTipoPedido.value;
+            const direccion = document.getElementById('direccion-cliente').value.trim();
+
             const datosOrden = {
                 tipo_pedido: tipoPedido,
                 nombre_cliente: nombreCliente,
@@ -275,9 +330,11 @@
                 carrito: carrito
             };
 
+            const botonConfirmar = document.getElementById('btn-confirmar-envio');
+
             try {
-                document.querySelector('.btn-order').disabled = true;
-                document.querySelector('.btn-order').innerText = 'Enviando...';
+                botonConfirmar.disabled = true;
+                botonConfirmar.innerText = 'Enviando...';
 
                 const respuesta = await fetch('https://backend-la-escondida.onrender.com/api/ordenes', {
                     method: 'POST',
@@ -288,6 +345,7 @@
                 const resultado = await respuesta.json();
 
                 if (resultado.id_orden) {
+                    cerrarResumen();
                     alert('¡Pedido #' + resultado.id_orden + ' enviado con éxito!');
                     carrito = [];
                     total = 0;
@@ -301,8 +359,8 @@
             } catch (error) {
                 alert("Hubo un error al enviar el pedido. Intenta de nuevo.");
             } finally {
-                document.querySelector('.btn-order').disabled = false;
-                document.querySelector('.btn-order').innerText = 'Enviar Pedido';
+                botonConfirmar.disabled = false;
+                botonConfirmar.innerText = '✅ Confirmar y Enviar';
             }
         }
     </script>

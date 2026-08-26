@@ -18,6 +18,10 @@
         .btn-listo { background-color: #27ae60; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 15px; }
         .btn-rechazar { background-color: #e74c3c; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
         .btn-activar-sonido { display: block; margin: 0 auto 1.5rem; background-color: #f39c12; color: #333; border: none; padding: 12px 20px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .badge-tiempo { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; }
+        .badge-tiempo.tiempo-normal { background-color: #eafaf1; color: #27ae60; }
+        .badge-tiempo.tiempo-alerta { background-color: #fef5e7; color: #f39c12; }
+        .badge-tiempo.tiempo-critico { background-color: #fdecea; color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -37,15 +41,26 @@
         // por eso el AudioContext se crea y el audio se precarga con el botón "Activar sonido".
         let contextoAudio = null;
         let bufferSonidoAlerta = null;
+        let vozActivada = false;
+
+        // Guarda, por cada orden, qué múltiplos de 5 minutos ya se anunciaron por voz
+        const umbralesAnunciados = {};
 
         async function activarSonido() {
             try {
                 contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
                 contextoAudio.resume();
 
-                const respuesta = await fetch('alerta-pedidos.mp3');
+                const respuesta = await fetch('alerta.mp3');
                 const datosArray = await respuesta.arrayBuffer();
                 bufferSonidoAlerta = await contextoAudio.decodeAudioData(datosArray);
+
+                // Desbloqueamos también la voz con la misma interacción del usuario
+                if ('speechSynthesis' in window) {
+                    const prueba = new SpeechSynthesisUtterance('');
+                    window.speechSynthesis.speak(prueba);
+                    vozActivada = true;
+                }
 
                 const boton = document.getElementById('btn-activar-sonido');
                 boton.innerText = '🔔 Sonido activado';
@@ -53,6 +68,30 @@
             } catch (error) {
                 console.error("No se pudo activar el audio:", error);
             }
+        }
+
+        function anunciarPorVoz(texto) {
+            if (!vozActivada || !('speechSynthesis' in window)) return;
+            const mensaje = new SpeechSynthesisUtterance(texto);
+            mensaje.lang = 'es-MX';
+            window.speechSynthesis.speak(mensaje);
+        }
+
+        // Calcula cuántos minutos lleva la orden pendiente y anuncia por voz cada 5 minutos cumplidos
+        function calcularYAnunciarTiempo(id_orden, numeroDia, fechaCreacion) {
+            const creado = new Date(fechaCreacion);
+            const minutos = Math.max(0, Math.floor((Date.now() - creado.getTime()) / 60000));
+            const umbralActual = Math.floor(minutos / 5) * 5;
+
+            if (umbralActual >= 5) {
+                if (!umbralesAnunciados[id_orden]) umbralesAnunciados[id_orden] = new Set();
+                if (!umbralesAnunciados[id_orden].has(umbralActual)) {
+                    umbralesAnunciados[id_orden].add(umbralActual);
+                    anunciarPorVoz(`Atención, la orden ${numeroDia} lleva ${umbralActual} minutos esperando.`);
+                }
+            }
+
+            return minutos;
         }
 
         function reproducirSonidoAlerta() {
@@ -99,6 +138,7 @@
                             nombreCliente: fila.nombre_cliente,
                             telefono: fila.telefono,
                             direccion: fila.direccion,
+                            fechaCreacion: fila.fecha_creacion,
                             productos: [],
                             alerta: fila.alerta_insumo
                         };
@@ -127,19 +167,20 @@
                         : '';
 
                     const motivoSeguro = orden.alerta ? orden.alerta.replace(/'/g, "\\'") : '';
-                    const htmlBotonRechazar = orden.alerta
-                        ? `<button class="btn-rechazar" onclick="rechazarOrden(${id_orden}, '${motivoSeguro}')">❌ Rechazar (sin insumo)</button>`
-                        : '';
+
+                    const minutosTranscurridos = calcularYAnunciarTiempo(id_orden, orden.numeroDia, orden.fechaCreacion);
+                    const claseTiempo = minutosTranscurridos >= 10 ? 'tiempo-critico' : minutosTranscurridos >= 5 ? 'tiempo-alerta' : 'tiempo-normal';
 
                     const ticket = document.createElement('div');
                     ticket.className = 'ticket';
                     ticket.innerHTML = `
                         <h2>Orden #${orden.numeroDia} - ${origen}</h2>
+                        <div class="badge-tiempo ${claseTiempo}">⏱ ${minutosTranscurridos} min</div>
                         ${htmlInfoCliente}
                         ${htmlProductos}
                         ${htmlAlerta}
                         <button class="btn-listo" onclick="marcarLista(${id_orden})">✅ Marcar como Lista</button>
-                        ${htmlBotonRechazar}
+                        <button class="btn-rechazar" onclick="rechazarOrden(${id_orden}, '${motivoSeguro}')">❌ Cancelar pedido</button>
                     `;
                     monitor.appendChild(ticket);
                 }
@@ -168,22 +209,25 @@
             }
         }
 
-        async function rechazarOrden(id_orden, motivo) {
-            const confirmar = confirm(`¿Rechazar la Orden #${id_orden} por falta de insumo?\n${motivo}`);
-            if (!confirmar) return;
+        async function rechazarOrden(id_orden, motivoSugerido) {
+            const motivo = prompt(
+                `¿Por qué se cancela la Orden #${id_orden}?`,
+                motivoSugerido || 'Cancelado por cocina'
+            );
+            if (motivo === null) return; // Canceló el prompt, no hacemos nada
 
             try {
                 const respuesta = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/rechazar`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ motivo })
+                    body: JSON.stringify({ motivo: motivo || 'Cancelado por cocina' })
                 });
 
                 if (respuesta.ok) {
                     cargarOrdenesCocina();
                 } else {
                     const err = await respuesta.json();
-                    alert(err.error || "No se pudo rechazar la orden.");
+                    alert(err.error || "No se pudo cancelar la orden.");
                 }
             } catch (error) {
                 alert("Hubo un error al conectar con el servidor.");
