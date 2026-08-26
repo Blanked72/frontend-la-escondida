@@ -51,7 +51,7 @@
                 contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
                 contextoAudio.resume();
 
-                const respuesta = await fetch('alerta.mp3');
+                const respuesta = await fetch('alerta-pedidos.mp3');
                 const datosArray = await respuesta.arrayBuffer();
                 bufferSonidoAlerta = await contextoAudio.decodeAudioData(datosArray);
 
