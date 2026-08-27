@@ -140,12 +140,13 @@
                         <th>Nombre</th>
                         <th>Precio</th>
                         <th>Categoría</th>
+                        <th>Sabores/Opciones</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-productos">
-                    <tr><td colspan="5">Cargando productos...</td></tr>
+                    <tr><td colspan="6">Cargando productos...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -165,6 +166,10 @@
                 <div class="form-group">
                     <label>Categoría:</label>
                     <select id="categoria-producto" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Sabores u opciones (opcional, separados por coma):</label>
+                    <input type="text" id="opciones-producto" placeholder="Ej. BBQ Normal, BBQ Picante, Mango Habanero, Búfalo">
                 </div>
                 <button type="submit" class="btn-submit">Guardar Producto</button>
             </form>
@@ -441,7 +446,7 @@
                 idsProductosTabla = [];
 
                 if (!Array.isArray(productosTodos) || productosTodos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5">No hay productos registrados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">No hay productos registrados.</td></tr>';
                     return;
                 }
 
@@ -456,6 +461,7 @@
                         <td><input type="text" id="nombre-prod-${prod.id_producto}" value="${prod.nombre}" style="width: 100%;"></td>
                         <td><input type="number" step="0.01" id="precio-prod-${prod.id_producto}" value="${prod.precio}" style="width: 80px;"></td>
                         <td><select id="categoria-prod-${prod.id_producto}">${opcionesCategoria(prod.categoria)}</select></td>
+                        <td><input type="text" id="opciones-prod-${prod.id_producto}" value="${prod.opciones || ''}" placeholder="Sin opciones" style="width: 160px;"></td>
                         <td>${prod.disponible ? '✅ Disponible' : '🚫 Deshabilitado'}</td>
                         <td>
                             <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarProducto(${prod.id_producto})">💾 Guardar</button>
@@ -474,6 +480,7 @@
             const nombre = document.getElementById(`nombre-prod-${id_producto}`).value;
             const precio = parseFloat(document.getElementById(`precio-prod-${id_producto}`).value);
             const categoria = document.getElementById(`categoria-prod-${id_producto}`).value;
+            const opciones = document.getElementById(`opciones-prod-${id_producto}`).value.trim();
 
             if (!nombre || isNaN(precio) || precio < 0) {
                 return { ok: false, nombre: nombre || `#${id_producto}`, error: 'nombre o precio inválido' };
@@ -483,7 +490,7 @@
                 const res = await fetch(`${API_URL}/productos/${id_producto}`, {
                     method: 'PUT',
                     headers: headersAdmin(),
-                    body: JSON.stringify({ nombre, precio, categoria })
+                    body: JSON.stringify({ nombre, precio, categoria, opciones })
                 });
 
                 if (res.ok) return { ok: true, nombre };
@@ -552,12 +559,13 @@
             const nombre = document.getElementById('nombre-producto').value;
             const precio = parseFloat(document.getElementById('precio-producto').value);
             const categoria = document.getElementById('categoria-producto').value;
+            const opciones = document.getElementById('opciones-producto').value.trim();
 
             try {
                 const res = await fetch(`${API_URL}/productos`, {
                     method: 'POST',
                     headers: headersAdmin(),
-                    body: JSON.stringify({ nombre, precio, categoria })
+                    body: JSON.stringify({ nombre, precio, categoria, opciones })
                 });
 
                 if (res.ok) {

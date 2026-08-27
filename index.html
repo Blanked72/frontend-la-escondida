@@ -192,14 +192,29 @@
                         // Aseguramos que si el nombre tiene comillas no rompa el código
                         const nombreSeguro = prod.nombre.replace(/'/g, "\\'");
 
-                        card.innerHTML =
-                            '<h3>' + prod.nombre + '</h3>' +
-                            '<p>$' + prod.precio + '</p>' +
-                            '<div class="botones-accion">' +
-                                '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
-                                '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
-                            '</div>' +
-                            '<button class="btn-nota" onclick="agregarConNota(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">📝 Agregar con nota</button>';
+                        if (prod.opciones && prod.opciones.trim()) {
+                            // Producto con variantes (ej. sabores): se elige antes de agregar
+                            const listaOpciones = prod.opciones.split(',').map(o => o.trim()).filter(o => o);
+                            let opcionesHtml = '<option value="">Elige un sabor...</option>';
+                            listaOpciones.forEach(op => {
+                                opcionesHtml += `<option value="${op}">${op}</option>`;
+                            });
+
+                            card.innerHTML =
+                                '<h3>' + prod.nombre + '</h3>' +
+                                '<p>$' + prod.precio + '</p>' +
+                                '<select id="sabor-' + prod.id_producto + '" style="width: 100%; padding: 0.5rem; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc;">' + opcionesHtml + '</select>' +
+                                '<button class="btn-add" style="width: 100%;" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔ Agregar</button>';
+                        } else {
+                            card.innerHTML =
+                                '<h3>' + prod.nombre + '</h3>' +
+                                '<p>$' + prod.precio + '</p>' +
+                                '<div class="botones-accion">' +
+                                    '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
+                                    '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
+                                '</div>' +
+                                '<button class="btn-nota" onclick="agregarConNota(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">📝 Agregar con nota</button>';
+                        }
                         grid.appendChild(card);
                     });
 
@@ -228,6 +243,21 @@
             carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: nota.trim() || null });
             total += parseFloat(precio);
             actualizarTextosCarrito();
+        }
+
+        function agregarConSabor(id, nombre, precio) {
+            const select = document.getElementById(`sabor-${id}`);
+            const sabor = select.value;
+
+            if (!sabor) {
+                alert("Elige un sabor antes de agregar.");
+                return;
+            }
+
+            carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: sabor });
+            total += parseFloat(precio);
+            actualizarTextosCarrito();
+            select.value = ''; // Listo para el siguiente
         }
 
         function quitarUnidadDelCarrito(id, precio) {
