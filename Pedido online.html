@@ -311,7 +311,7 @@
             carrito.forEach(item => {
                 const clave = `${item.id_producto}::${item.nota || ''}`;
                 if (!grupos[clave]) {
-                    grupos[clave] = { nombre: item.nombre, precio: item.precio, nota: item.nota, cantidad: 0 };
+                    grupos[clave] = { id_producto: item.id_producto, nombre: item.nombre, precio: item.precio, nota: item.nota, cantidad: 0 };
                 }
                 grupos[clave].cantidad += 1;
             });
