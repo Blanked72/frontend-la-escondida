@@ -498,6 +498,7 @@
                         <td>
                             <button class="btn-submit" style="padding: 6px 10px; width: auto; margin: 0;" onclick="guardarProducto(${prod.id_producto})">💾 Guardar</button>
                             ${botonDisponibilidad}
+                            <button class="btn-del" onclick="eliminarProductoPermanente(${prod.id_producto}, '${prod.nombre.replace(/'/g, "\\'")}')">🗑️ Eliminar</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -582,6 +583,27 @@
                 }
             } catch (error) {
                 alert("Error de conexión al actualizar la disponibilidad.");
+            }
+        }
+
+        // --- Eliminar producto permanentemente ---
+        async function eliminarProductoPermanente(id_producto, nombre) {
+            if (!confirm(`¿Eliminar "${nombre}" para siempre? Esta acción no se puede deshacer.`)) return;
+
+            try {
+                const res = await fetch(`${API_URL}/productos/${id_producto}`, {
+                    method: 'DELETE',
+                    headers: headersAdmin()
+                });
+
+                if (res.ok) {
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al eliminar el producto.");
             }
         }
 
