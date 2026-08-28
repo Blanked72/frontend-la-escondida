@@ -193,18 +193,27 @@
                         const nombreSeguro = prod.nombre.replace(/'/g, "\\'");
 
                         if (prod.opciones && prod.opciones.trim()) {
-                            // Producto con variantes (ej. sabores): se elige antes de agregar
-                            const listaOpciones = prod.opciones.split(',').map(o => o.trim()).filter(o => o);
-                            let opcionesHtml = '<option value="">Elige un sabor...</option>';
+                            // Producto con variantes: cada una puede traer su propio precio (Nombre:Precio)
+                            // o usar el precio base del producto si no lleva precio (ej. sabores de alitas)
+                            const listaOpciones = prod.opciones.split(',').map(entrada => {
+                                const partes = entrada.split(':');
+                                const nombreOpcion = partes[0].trim();
+                                const precioOpcion = partes.length > 1 ? parseFloat(partes[1]) : parseFloat(prod.precio);
+                                return { nombre: nombreOpcion, precio: precioOpcion };
+                            }).filter(o => o.nombre);
+
+                            let opcionesHtml = '<option value="">Elige una opción...</option>';
                             listaOpciones.forEach(op => {
-                                opcionesHtml += `<option value="${op}">${op}</option>`;
+                                opcionesHtml += `<option value="${op.nombre}|${op.precio}">${op.nombre} - $${op.precio.toFixed(2)}</option>`;
                             });
+
+                            const precioMinimo = Math.min(...listaOpciones.map(o => o.precio));
 
                             card.innerHTML =
                                 '<h3>' + prod.nombre + '</h3>' +
-                                '<p>$' + prod.precio + '</p>' +
+                                '<p>Desde $' + precioMinimo.toFixed(2) + '</p>' +
                                 '<select id="sabor-' + prod.id_producto + '" style="width: 100%; padding: 0.5rem; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc;">' + opcionesHtml + '</select>' +
-                                '<button class="btn-add" style="width: 100%;" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔ Agregar</button>';
+                                '<button class="btn-add" style="width: 100%;" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\')">✔ Agregar</button>';
                         } else {
                             card.innerHTML =
                                 '<h3>' + prod.nombre + '</h3>' +
@@ -245,17 +254,18 @@
             actualizarTextosCarrito();
         }
 
-        function agregarConSabor(id, nombre, precio) {
+        function agregarConSabor(id, nombre) {
             const select = document.getElementById(`sabor-${id}`);
-            const sabor = select.value;
-
-            if (!sabor) {
-                alert("Elige un sabor antes de agregar.");
+            if (!select.value) {
+                alert("Elige una opción antes de agregar.");
                 return;
             }
 
+            const [sabor, precioTexto] = select.value.split('|');
+            const precio = parseFloat(precioTexto);
+
             carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: sabor });
-            total += parseFloat(precio);
+            total += precio;
             actualizarTextosCarrito();
             select.value = ''; // Listo para el siguiente
         }
