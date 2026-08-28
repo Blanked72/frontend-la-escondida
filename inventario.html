@@ -124,8 +124,8 @@
 
                 insumos.forEach(insumo => {
                     const nombre = insumo.nombre || 'Insumo Desconocido';
-                    const cantidad = insumo.cantidad_actual || 0;
-                    const minimo = insumo.stock_minimo ?? 5;
+                    const cantidad = parseFloat(insumo.cantidad_actual) || 0;
+                    const minimo = parseFloat(insumo.stock_minimo ?? 5);
                     const esBajo = cantidad < minimo;
 
                     if (esBajo) insumosBajos.push(nombre);
@@ -207,8 +207,8 @@
                 let filas = '';
                 insumos.forEach(insumo => {
                     const nombre = insumo.nombre || 'Insumo Desconocido';
-                    const cantidad = insumo.cantidad_actual ?? 0;
-                    const minimo = insumo.stock_minimo ?? 5;
+                    const cantidad = parseFloat(insumo.cantidad_actual) || 0;
+                    const minimo = parseFloat(insumo.stock_minimo ?? 5);
                     const esBajo = cantidad < minimo;
                     const estado = esBajo ? '⚠️ Bajo' : '✅ OK';
                     filas += `
