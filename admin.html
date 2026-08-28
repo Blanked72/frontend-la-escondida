@@ -91,13 +91,14 @@
                 <thead>
                     <tr>
                         <th>Producto</th>
+                        <th>Variante</th>
                         <th>Insumo Usado</th>
                         <th>Cantidad Requerida</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-recetas">
-                    <tr><td colspan="4">Cargando recetas...</td></tr>
+                    <tr><td colspan="5">Cargando recetas...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -108,8 +109,14 @@
             <form id="form-receta">
                 <div class="form-group">
                     <label>Producto:</label>
-                    <select id="select-producto" required>
+                    <select id="select-producto" required onchange="actualizarSelectVariante()">
                         <option value="">Cargando productos...</option>
+                    </select>
+                </div>
+                <div class="form-group" id="grupo-variante" style="display: none;">
+                    <label>¿Esta receta aplica a...?</label>
+                    <select id="select-variante">
+                        <option value="">Todas las variantes de este producto</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -420,6 +427,29 @@
             }
         });
 
+        function actualizarSelectVariante() {
+            const selectProducto = document.getElementById('select-producto');
+            const grupoVariante = document.getElementById('grupo-variante');
+            const selectVariante = document.getElementById('select-variante');
+
+            const opcionSeleccionada = selectProducto.options[selectProducto.selectedIndex];
+            const opciones = opcionSeleccionada ? (opcionSeleccionada.dataset.opciones || '') : '';
+
+            if (!opciones.trim()) {
+                grupoVariante.style.display = 'none';
+                selectVariante.innerHTML = '<option value="">Todas las variantes de este producto</option>';
+                return;
+            }
+
+            const nombresVariantes = opciones.split(',').map(entrada => entrada.split(':')[0].trim()).filter(v => v);
+            let html = '<option value="">Todas las variantes de este producto</option>';
+            nombresVariantes.forEach(nombre => {
+                html += `<option value="${nombre}">Solo "${nombre}"</option>`;
+            });
+            selectVariante.innerHTML = html;
+            grupoVariante.style.display = 'block';
+        }
+
         // --- Cargar Productos (para el selector de recetas y la tabla editable) ---
         async function cargarProductos() {
             try {
@@ -432,6 +462,7 @@
                     const option = document.createElement('option');
                     option.value = prod.id_producto;
                     option.textContent = prod.nombre;
+                    option.dataset.opciones = prod.opciones || '';
                     selectProducto.appendChild(option);
                 });
             } catch (error) {
@@ -592,18 +623,21 @@
                 tbody.innerHTML = '';
 
                 if (recetas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4">No hay recetas configuradas.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5">No hay recetas configuradas.</td></tr>';
                     return;
                 }
 
                 recetas.forEach(receta => {
                     const tr = document.createElement('tr');
+                    const varianteTexto = receta.variante ? `Solo "${receta.variante}"` : 'Todas las variantes';
+                    const varianteParam = receta.variante ? `'${receta.variante.replace(/'/g, "\\'")}'` : 'null';
                     tr.innerHTML = `
                         <td><strong>${receta.nombre_producto}</strong></td>
+                        <td>${varianteTexto}</td>
                         <td>${receta.nombre_insumo}</td>
                         <td>${receta.cantidad_requerida}</td>
                         <td>
-                            <button class="btn-del" onclick="eliminarReceta(${receta.id_producto}, ${receta.id_insumo})">🗑️ Eliminar</button>
+                            <button class="btn-del" onclick="eliminarReceta(${receta.id_producto}, ${receta.id_insumo}, ${varianteParam})">🗑️ Eliminar</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -619,12 +653,13 @@
             const id_producto = document.getElementById('select-producto').value;
             const id_insumo = document.getElementById('select-insumo').value;
             const cantidad_requerida = parseFloat(document.getElementById('cantidad-receta').value);
+            const variante = document.getElementById('select-variante').value || null;
 
             try {
                 const res = await fetch(`${API_URL}/recetas`, {
                     method: 'POST',
                     headers: headersAdmin(),
-                    body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida })
+                    body: JSON.stringify({ id_producto, id_insumo, cantidad_requerida, variante })
                 });
 
                 if (res.ok) {
@@ -640,11 +675,12 @@
         });
 
         // --- Eliminar Receta ---
-        async function eliminarReceta(id_producto, id_insumo) {
+        async function eliminarReceta(id_producto, id_insumo, variante) {
             if (!confirm("¿Deseas eliminar este insumo de la receta del producto?")) return;
 
             try {
-                const res = await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}`, {
+                const query = variante ? `?variante=${encodeURIComponent(variante)}` : '';
+                const res = await fetch(`${API_URL}/recetas/${id_producto}/${id_insumo}${query}`, {
                     method: 'DELETE',
                     headers: headersAdmin()
                 });

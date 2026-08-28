@@ -55,6 +55,7 @@
         .btn-remove { background-color: #e74c3c; }
         .btn-nota { background-color: #95a5a6; color: white; border: none; padding: 0.4rem; border-radius: 5px; cursor: pointer; width: 100%; font-size: 0.85rem; margin-top: 8px; }
         .nota-resumen { color: #c0392b; font-size: 0.85rem; }
+        .btn-quitar-linea { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; }
 
         .datos-cliente { background: white; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .datos-cliente h2 { margin-top: 0; font-size: 1.2rem; }
@@ -338,14 +339,32 @@
                 return;
             }
 
+            renderizarResumen();
+        }
+
+        function renderizarResumen() {
+            if (carrito.length === 0) {
+                cerrarResumen();
+                return;
+            }
+
+            const nombreCliente = document.getElementById('nombre-cliente').value.trim();
+            const telefono = document.getElementById('telefono-cliente').value.trim();
+            const tipoPedido = selectTipoPedido.value;
+            const direccion = document.getElementById('direccion-cliente').value.trim();
+
             const items = agruparCarritoParaMostrar();
             let filas = '';
             items.forEach(item => {
                 const subtotal = (item.cantidad * item.precio).toFixed(2);
+                const notaEscapada = (item.nota || '').replace(/'/g, "\\'");
                 filas += `
                     <tr>
                         <td>${item.cantidad}x ${item.nombre}${item.nota ? `<br><em class="nota-resumen">${item.nota}</em>` : ''}</td>
                         <td style="text-align:right; white-space:nowrap;">$${subtotal}</td>
+                        <td style="text-align:center;">
+                            <button class="btn-quitar-linea" onclick="quitarLineaDelResumen(${item.id_producto}, '${notaEscapada}')">🗑️</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -359,6 +378,13 @@
                 <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${total.toFixed(2)}</p>
             `;
             document.getElementById('modal-resumen').style.display = 'flex';
+        }
+
+        function quitarLineaDelResumen(id_producto, nota) {
+            carrito = carrito.filter(item => !(item.id_producto === id_producto && (item.nota || '') === (nota || '')));
+            total = carrito.reduce((suma, item) => suma + item.precio, 0);
+            actualizarTextosCarrito();
+            renderizarResumen();
         }
 
         function cerrarResumen() {
