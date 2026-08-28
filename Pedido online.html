@@ -225,13 +225,17 @@
                                 '<h3>' + prod.nombre + '</h3>' +
                                 '<p>Desde $' + precioMinimo.toFixed(2) + '</p>' +
                                 '<select id="sabor-' + prod.id_producto + '" style="width: 100%; padding: 0.5rem; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc;">' + opcionesHtml + '</select>' +
-                                '<button class="btn-add" style="width: 100%;" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\')">✔ Agregar</button>';
+                                '<div class="botones-accion">' +
+                                    '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
+                                    '<button class="btn-add" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\')">✔</button>' +
+                                '</div>' +
+                                '<button class="btn-nota" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\', true)">📝 Agregar con nota</button>';
                         } else {
                             card.innerHTML =
                                 '<h3>' + prod.nombre + '</h3>' +
                                 '<p>$' + prod.precio + '</p>' +
                                 '<div class="botones-accion">' +
-                                    '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ', ' + prod.precio + ')">✖</button>' +
+                                    '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
                                     '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
                                 '</div>' +
                                 '<button class="btn-nota" onclick="agregarConNota(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">📝 Agregar con nota</button>';
@@ -266,7 +270,7 @@
             actualizarTextosCarrito();
         }
 
-        function agregarConSabor(id, nombre) {
+        function agregarConSabor(id, nombre, pedirNota) {
             const select = document.getElementById(`sabor-${id}`);
             if (!select.value) {
                 alert("Elige una opción antes de agregar.");
@@ -276,20 +280,28 @@
             const [sabor, precioTexto] = select.value.split('|');
             const precio = parseFloat(precioTexto);
 
-            carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: sabor });
+            let notaFinal = sabor;
+            if (pedirNota) {
+                const notaExtra = prompt(`Nota extra para "${sabor}" (ej. sin cebolla, extra queso):`);
+                if (notaExtra === null) return; // Canceló
+                if (notaExtra.trim()) notaFinal = `${sabor} - ${notaExtra.trim()}`;
+            }
+
+            carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: notaFinal });
             total += precio;
             actualizarTextosCarrito();
             select.value = '';
         }
 
-        function quitarUnidadDelCarrito(id, precio) {
-            const index = carrito.findIndex(item => item.id_producto === id);
-
-            if (index !== -1) {
-                carrito.splice(index, 1);
-                total -= parseFloat(precio);
-                if (total < 0) total = 0;
-                actualizarTextosCarrito();
+        function quitarUnidadDelCarrito(id) {
+            for (let i = carrito.length - 1; i >= 0; i--) {
+                if (carrito[i].id_producto === id) {
+                    total -= carrito[i].precio;
+                    carrito.splice(i, 1);
+                    if (total < 0) total = 0;
+                    actualizarTextosCarrito();
+                    return;
+                }
             }
         }
 
