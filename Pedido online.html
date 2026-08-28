@@ -226,6 +226,7 @@
                                 '<h3>' + prod.nombre + '</h3>' +
                                 '<p>Desde $' + precioMinimo.toFixed(2) + '</p>' +
                                 '<select id="sabor-' + prod.id_producto + '" style="width: 100%; padding: 0.5rem; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc;">' + opcionesHtml + '</select>' +
+                                '<input type="number" id="cant-' + prod.id_producto + '" min="1" value="1" style="width: 60px; text-align: center; margin-bottom: 8px; padding: 4px; border-radius: 5px; border: 1px solid #ccc;">' +
                                 '<div class="botones-accion">' +
                                     '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
                                     '<button class="btn-add" onclick="agregarConSabor(' + prod.id_producto + ', \'' + nombreSeguro + '\')">✔</button>' +
@@ -235,6 +236,7 @@
                             card.innerHTML =
                                 '<h3>' + prod.nombre + '</h3>' +
                                 '<p>$' + prod.precio + '</p>' +
+                                '<input type="number" id="cant-' + prod.id_producto + '" min="1" value="1" style="width: 60px; text-align: center; margin-bottom: 8px; padding: 4px; border-radius: 5px; border: 1px solid #ccc;">' +
                                 '<div class="botones-accion">' +
                                     '<button class="btn-remove" onclick="quitarUnidadDelCarrito(' + prod.id_producto + ')">✖</button>' +
                                     '<button class="btn-add" onclick="agregarAlCarrito(' + prod.id_producto + ', \'' + nombreSeguro + '\', ' + prod.precio + ')">✔</button>' +
@@ -257,17 +259,31 @@
             document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
 
+        function leerCantidad(id) {
+            const input = document.getElementById(`cant-${id}`);
+            if (!input) return 1;
+            const valor = Math.max(1, parseInt(input.value) || 1);
+            input.value = 1;
+            return valor;
+        }
+
         function agregarAlCarrito(id, nombre, precio) {
-            carrito.push({ id_producto: id, nombre: nombre, precio: precio });
-            total += parseFloat(precio);
+            const cantidad = leerCantidad(id);
+            for (let i = 0; i < cantidad; i++) {
+                carrito.push({ id_producto: id, nombre: nombre, precio: precio });
+            }
+            total += parseFloat(precio) * cantidad;
             actualizarTextosCarrito();
         }
 
         function agregarConNota(id, nombre, precio) {
+            const cantidad = leerCantidad(id);
             const nota = prompt(`Nota para "${nombre}" (ej. sin cebolla, extra queso):`);
             if (nota === null) return; // Canceló
-            carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: nota.trim() || null });
-            total += parseFloat(precio);
+            for (let i = 0; i < cantidad; i++) {
+                carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: nota.trim() || null });
+            }
+            total += parseFloat(precio) * cantidad;
             actualizarTextosCarrito();
         }
 
@@ -278,6 +294,7 @@
                 return;
             }
 
+            const cantidad = leerCantidad(id);
             const [sabor, precioTexto] = select.value.split('|');
             const precio = parseFloat(precioTexto);
 
@@ -288,8 +305,10 @@
                 if (notaExtra.trim()) notaFinal = `${sabor} - ${notaExtra.trim()}`;
             }
 
-            carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: notaFinal });
-            total += precio;
+            for (let i = 0; i < cantidad; i++) {
+                carrito.push({ id_producto: id, nombre: nombre, precio: precio, nota: notaFinal });
+            }
+            total += precio * cantidad;
             actualizarTextosCarrito();
             select.value = '';
         }
@@ -381,8 +400,14 @@
         }
 
         function quitarLineaDelResumen(id_producto, nota) {
-            carrito = carrito.filter(item => !(item.id_producto === id_producto && (item.nota || '') === (nota || '')));
-            total = carrito.reduce((suma, item) => suma + item.precio, 0);
+            for (let i = carrito.length - 1; i >= 0; i--) {
+                if (carrito[i].id_producto === id_producto && (carrito[i].nota || '') === (nota || '')) {
+                    total -= carrito[i].precio;
+                    carrito.splice(i, 1);
+                    break;
+                }
+            }
+            if (total < 0) total = 0;
             actualizarTextosCarrito();
             renderizarResumen();
         }
