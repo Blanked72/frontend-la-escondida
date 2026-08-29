@@ -175,9 +175,12 @@
                     <select id="categoria-producto" required></select>
                 </div>
                 <div class="form-group">
-                    <label>Sabores u opciones (opcional, separados por coma):</label>
-                    <input type="text" id="opciones-producto" placeholder="Ej. BBQ Normal, BBQ Picante  |  o con precio propio: Jamón:45, Milanesa:55">
-                    <small style="color: #777;">Si una opción no lleva precio, usa el precio base de arriba (ej. sabores de alitas). Si escribes "Nombre:Precio", esa opción cobra ese precio (ej. tortas, cafés, chilaquiles).</small>
+                    <label>Sabores u opciones (opcional):</label>
+                    <input type="text" id="opciones-producto" placeholder="Ej. BBQ Normal, BBQ Picante  |  con precio propio: Jamón:45, Milanesa:55  |  varios grupos (combos): Hamburguesa=Res, Pollo; Alitas=BBQ, Picante">
+                    <small style="color: #777;">
+                        • Un solo grupo: "BBQ Normal, BBQ Picante" (usa el precio base) o "Jamón:45, Milanesa:55" (precio propio por opción).<br>
+                        • Varios grupos en un mismo producto (ej. un combo con hamburguesa Y alitas): sepáralos con punto y coma, cada uno con "Etiqueta=opciones". Ejemplo: <code>Hamburguesa=Res, Pollo; Alitas=BBQ Normal, BBQ Picante, Búfalo</code>
+                    </small>
                 </div>
                 <button type="submit" class="btn-submit">Guardar Producto</button>
             </form>
@@ -441,7 +444,22 @@
                 return;
             }
 
-            const nombresVariantes = opciones.split(',').map(entrada => entrada.split(':')[0].trim()).filter(v => v);
+            let nombresVariantes = [];
+            if (opciones.includes('=')) {
+                // Varios grupos, ej: "Hamburguesa=Res, Pollo; Alitas=BBQ, Picante"
+                opciones.split(';').forEach(grupoRaw => {
+                    const partesGrupo = grupoRaw.split('=');
+                    const listaRaw = partesGrupo.length > 1 ? partesGrupo[1] : '';
+                    listaRaw.split(',').forEach(entrada => {
+                        const nombre = entrada.split(':')[0].trim();
+                        if (nombre) nombresVariantes.push(nombre);
+                    });
+                });
+            } else {
+                // Un solo grupo plano, ej: "BBQ Normal, BBQ Picante" o "Jamón:45, Milanesa:55"
+                nombresVariantes = opciones.split(',').map(entrada => entrada.split(':')[0].trim()).filter(v => v);
+            }
+
             let html = '<option value="">Todas las variantes de este producto</option>';
             nombresVariantes.forEach(nombre => {
                 html += `<option value="${nombre}">Solo "${nombre}"</option>`;
