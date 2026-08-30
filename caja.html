@@ -53,7 +53,7 @@
 
                     const origen = orden.tipo_pedido === 'domicilio' ? '🚚 A domicilio'
                         : orden.tipo_pedido === 'recoger' ? '🛍️ Para recoger'
-                        : `Mesa ${orden.numero_mesa}`;
+                        : `Mesa ${orden.numero_mesa}${orden.para_llevar ? ' · 🥡 Para llevar' : ''}`;
 
                     const htmlInfoCliente = orden.tipo_pedido && orden.tipo_pedido !== 'mesa'
                         ? `<div class="info-cliente">👤 ${orden.nombre_cliente} | 📞 ${orden.telefono}${orden.tipo_pedido === 'domicilio' ? ' | 📍 ' + orden.direccion : ''}</div>`
@@ -170,7 +170,7 @@
                 const { orden, items } = datos;
                 const origen = orden.tipo_pedido === 'domicilio' ? 'A domicilio'
                     : orden.tipo_pedido === 'recoger' ? 'Para recoger'
-                    : `Mesa ${orden.numero_mesa}`;
+                    : `Mesa ${orden.numero_mesa}${orden.para_llevar ? ' - Para llevar' : ''}`;
 
                 let filasItems = '';
                 items.forEach(item => {
@@ -183,6 +183,15 @@
                         </tr>
                     `;
                 });
+
+                if (orden.tipo_pedido === 'domicilio') {
+                    filasItems += `
+                        <tr>
+                            <td>Costo de envío</td>
+                            <td class="precio-item">$20.00</td>
+                        </tr>
+                    `;
+                }
 
                 const infoCliente = orden.tipo_pedido !== 'mesa'
                     ? `<div class="info-cliente-ticket">${orden.nombre_cliente || ''} · ${orden.telefono || ''}${orden.direccion ? '<br>' + orden.direccion : ''}</div>`

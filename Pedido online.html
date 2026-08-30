@@ -133,6 +133,7 @@
 
         selectTipoPedido.addEventListener('change', () => {
             campoDireccion.style.display = selectTipoPedido.value === 'domicilio' ? 'block' : 'none';
+            actualizarTextosCarrito();
         });
 
         cargarMenu();
@@ -280,8 +281,14 @@
             }
         }
 
+        const COSTO_ENVIO_DOMICILIO = 20;
+
+        function calcularCostoEnvio() {
+            return selectTipoPedido.value === 'domicilio' ? COSTO_ENVIO_DOMICILIO : 0;
+        }
+
         function actualizarTextosCarrito() {
-            document.getElementById('total').innerText = total.toFixed(2);
+            document.getElementById('total').innerText = (total + calcularCostoEnvio()).toFixed(2);
             document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
 
@@ -440,12 +447,17 @@
             });
 
             const origenTexto = tipoPedido === 'domicilio' ? `Entrega a domicilio: ${direccion}` : 'Recoger en tienda';
+            const costoEnvio = calcularCostoEnvio();
+            const lineaEnvio = costoEnvio > 0
+                ? `<p style="display:flex; justify-content:space-between; margin: 0.5rem 0 0;"><span>Costo de envío</span><span>$${costoEnvio.toFixed(2)}</span></p>`
+                : '';
 
             document.getElementById('resumen-contenido').innerHTML = `
                 <p style="margin:0 0 0.5rem;"><strong>${nombreCliente}</strong> · ${telefono}</p>
                 <p style="margin:0 0 1rem; color:#555;">${origenTexto}</p>
                 <table style="width:100%; border-collapse:collapse;">${filas}</table>
-                <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${total.toFixed(2)}</p>
+                ${lineaEnvio}
+                <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${(total + costoEnvio).toFixed(2)}</p>
             `;
             document.getElementById('modal-resumen').style.display = 'flex';
         }

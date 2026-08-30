@@ -81,6 +81,11 @@
         <div id="menu-grid">
             <p>Cargando menú...</p>
         </div>
+
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 1rem; background: white; padding: 0.8rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer;">
+            <input type="checkbox" id="para-llevar" style="width: 18px; height: 18px;">
+            🥡 Para llevar (si tomaron tu pedido en el mostrador)
+        </label>
     </div>
 
     <div class="cart-bar">
@@ -409,7 +414,13 @@
                 `;
             });
 
+            const paraLlevar = document.getElementById('para-llevar').checked;
+            const avisoParaLlevar = paraLlevar
+                ? '<p style="margin:0 0 1rem; color:#d35400; font-weight:bold;">🥡 Para llevar</p>'
+                : '';
+
             document.getElementById('resumen-contenido').innerHTML = `
+                ${avisoParaLlevar}
                 <table style="width:100%; border-collapse:collapse;">${filas}</table>
                 <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${total.toFixed(2)}</p>
             `;
@@ -438,7 +449,8 @@
             const datosOrden = {
                 mesa: numeroMesa,
                 total: total,
-                carrito: carrito
+                carrito: carrito,
+                para_llevar: document.getElementById('para-llevar').checked
             };
 
             const botonConfirmar = document.getElementById('btn-confirmar-envio');
@@ -460,6 +472,7 @@
                     alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
                     carrito = [];
                     total = 0;
+                    document.getElementById('para-llevar').checked = false;
                     actualizarTextosCarrito();
                 } else {
                     alert("Hubo un problema al procesar la orden.");

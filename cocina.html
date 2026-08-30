@@ -136,6 +136,7 @@
                             numeroDia: fila.numero_dia,
                             mesa: fila.numero_mesa,
                             tipoPedido: fila.tipo_pedido,
+                            paraLlevar: fila.para_llevar,
                             nombreCliente: fila.nombre_cliente,
                             telefono: fila.telefono,
                             direccion: fila.direccion,
@@ -157,7 +158,7 @@
 
                     const origen = orden.tipoPedido === 'domicilio' ? '🚚 A domicilio'
                         : orden.tipoPedido === 'recoger' ? '🛍️ Para recoger'
-                        : `Mesa ${orden.mesa}`;
+                        : `Mesa ${orden.mesa}${orden.paraLlevar ? ' · 🥡 Para llevar' : ''}`;
 
                     const htmlInfoCliente = orden.tipoPedido !== 'mesa'
                         ? `<div class="info-cliente">👤 ${orden.nombreCliente} | 📞 ${orden.telefono}${orden.tipoPedido === 'domicilio' ? ' | 📍 ' + orden.direccion : ''}</div>`
