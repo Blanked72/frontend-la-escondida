@@ -251,7 +251,24 @@
                 // para que el siguiente ticket abra una ventana limpia
                 ventana.onafterprint = () => ventana.close();
                 ventana.focus();
-                ventana.print();
+
+                // Esperamos a que el logo termine de cargar antes de imprimir; si no, el ticket
+                // sale sin logo cuando la imagen tarda más de lo que tarda en dispararse print()
+                const imgLogo = ventana.document.querySelector('.logo-ticket');
+                let yaImprimio = false;
+                function imprimirUnaVez() {
+                    if (yaImprimio) return;
+                    yaImprimio = true;
+                    ventana.print();
+                }
+
+                if (imgLogo && !imgLogo.complete) {
+                    imgLogo.onload = imprimirUnaVez;
+                    imgLogo.onerror = imprimirUnaVez; // Si el logo falla, igual imprimimos el resto del ticket
+                    setTimeout(imprimirUnaVez, 2000); // Seguro por si el evento de carga nunca dispara
+                } else {
+                    imprimirUnaVez();
+                }
             } catch (error) {
                 alert("Hubo un error al generar el ticket.");
             }
