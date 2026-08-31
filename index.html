@@ -82,10 +82,17 @@
             <p>Cargando menú...</p>
         </div>
 
-        <label style="display: flex; align-items: center; gap: 8px; margin-top: 1rem; background: white; padding: 0.8rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer;">
-            <input type="checkbox" id="para-llevar" style="width: 18px; height: 18px;">
-            🥡 Para llevar (si tomaron tu pedido en el mostrador)
-        </label>
+        <div id="seccion-domicilio" style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-top: 1rem;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold;">
+                <input type="checkbox" id="es-domicilio" style="width: 18px; height: 18px;">
+                🚚 Es a domicilio (+$20 de envío)
+            </label>
+            <div id="campos-domicilio" style="display: none; margin-top: 0.8rem;">
+                <input type="text" id="nombre-cliente-domicilio" placeholder="Nombre de quien recibe" style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;">
+                <input type="text" id="telefono-cliente-domicilio" placeholder="Teléfono de contacto" style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;">
+                <input type="text" id="direccion-cliente-domicilio" placeholder="Dirección: calle, número, colonia..." style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;">
+            </div>
+        </div>
     </div>
 
     <div class="cart-bar">
@@ -274,10 +281,21 @@
             }
         }
 
+        const COSTO_ENVIO_DOMICILIO = 20;
+
+        function calcularCostoEnvio() {
+            return document.getElementById('es-domicilio').checked ? COSTO_ENVIO_DOMICILIO : 0;
+        }
+
         function actualizarTextosCarrito() {
-            document.getElementById('total').innerText = total.toFixed(2);
+            document.getElementById('total').innerText = (total + calcularCostoEnvio()).toFixed(2);
             document.getElementById('items-count').innerText = carrito.length + (carrito.length === 1 ? ' artículo' : ' artículos');
         }
+
+        document.getElementById('es-domicilio').addEventListener('change', function() {
+            document.getElementById('campos-domicilio').style.display = this.checked ? 'block' : 'none';
+            actualizarTextosCarrito();
+        });
 
         function leerCantidad(id) {
             const input = document.getElementById(`cant-${id}`);
@@ -389,6 +407,22 @@
                 alert("Agrega algo al carrito primero.");
                 return;
             }
+
+            if (document.getElementById('es-domicilio').checked) {
+                const nombre = document.getElementById('nombre-cliente-domicilio').value.trim();
+                const telefono = document.getElementById('telefono-cliente-domicilio').value.trim();
+                const direccion = document.getElementById('direccion-cliente-domicilio').value.trim();
+
+                if (!nombre || !telefono) {
+                    alert("Ingresa el nombre y teléfono de quien recibe.");
+                    return;
+                }
+                if (!direccion) {
+                    alert("Ingresa la dirección de entrega.");
+                    return;
+                }
+            }
+
             renderizarResumen();
         }
 
@@ -414,15 +448,27 @@
                 `;
             });
 
-            const paraLlevar = document.getElementById('para-llevar').checked;
-            const avisoParaLlevar = paraLlevar
-                ? '<p style="margin:0 0 1rem; color:#d35400; font-weight:bold;">🥡 Para llevar</p>'
-                : '';
+            const esDomicilio = document.getElementById('es-domicilio').checked;
+            const costoEnvio = calcularCostoEnvio();
+
+            let avisoDomicilio = '';
+            let lineaEnvio = '';
+            if (esDomicilio) {
+                const nombre = document.getElementById('nombre-cliente-domicilio').value.trim();
+                const telefono = document.getElementById('telefono-cliente-domicilio').value.trim();
+                const direccion = document.getElementById('direccion-cliente-domicilio').value.trim();
+                avisoDomicilio = `
+                    <p style="margin:0 0 0.3rem; color:#d35400; font-weight:bold;">🚚 A domicilio</p>
+                    <p style="margin:0 0 1rem; color:#555;">${nombre} · ${telefono}<br>${direccion}</p>
+                `;
+                lineaEnvio = `<p style="display:flex; justify-content:space-between; margin: 0.5rem 0 0;"><span>Costo de envío</span><span>$${costoEnvio.toFixed(2)}</span></p>`;
+            }
 
             document.getElementById('resumen-contenido').innerHTML = `
-                ${avisoParaLlevar}
+                ${avisoDomicilio}
                 <table style="width:100%; border-collapse:collapse;">${filas}</table>
-                <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${total.toFixed(2)}</p>
+                ${lineaEnvio}
+                <p style="text-align:right; font-weight:bold; font-size:1.2rem; margin-top:1rem;">Total: $${(total + costoEnvio).toFixed(2)}</p>
             `;
             document.getElementById('modal-resumen').style.display = 'flex';
         }
@@ -446,11 +492,19 @@
         }
 
         async function confirmarYEnviarOrden() {
-            const datosOrden = {
+            const esDomicilio = document.getElementById('es-domicilio').checked;
+
+            const datosOrden = esDomicilio ? {
+                tipo_pedido: 'domicilio',
+                nombre_cliente: document.getElementById('nombre-cliente-domicilio').value.trim(),
+                telefono: document.getElementById('telefono-cliente-domicilio').value.trim(),
+                direccion: document.getElementById('direccion-cliente-domicilio').value.trim(),
+                total: total,
+                carrito: carrito
+            } : {
                 mesa: numeroMesa,
                 total: total,
-                carrito: carrito,
-                para_llevar: document.getElementById('para-llevar').checked
+                carrito: carrito
             };
 
             const botonConfirmar = document.getElementById('btn-confirmar-envio');
@@ -472,7 +526,11 @@
                     alert('¡Orden #' + resultado.id_orden + ' enviada a cocina exitosamente!');
                     carrito = [];
                     total = 0;
-                    document.getElementById('para-llevar').checked = false;
+                    document.getElementById('es-domicilio').checked = false;
+                    document.getElementById('campos-domicilio').style.display = 'none';
+                    document.getElementById('nombre-cliente-domicilio').value = '';
+                    document.getElementById('telefono-cliente-domicilio').value = '';
+                    document.getElementById('direccion-cliente-domicilio').value = '';
                     actualizarTextosCarrito();
                 } else {
                     alert("Hubo un problema al procesar la orden.");
