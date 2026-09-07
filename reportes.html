@@ -24,6 +24,10 @@
         tr:nth-child(even) { background-color: #f8f9fa; }
         .btn-exportar { background-color: #27ae60; color: white; border: none; padding: 8px 16px; font-size: 0.95rem; border-radius: 5px; cursor: pointer; margin: 0.5rem auto 0; display: block; }
         .btn-exportar:hover { background-color: #229954; }
+        .btn-peligro { background-color: #e74c3c; color: white; border: none; padding: 8px 16px; font-size: 0.95rem; border-radius: 5px; cursor: pointer; margin: 0.8rem auto 0; display: block; }
+        .btn-peligro:hover { background-color: #c0392b; }
+        .btn-cancelar-venta { background-color: #f39c12; color: white; border: none; padding: 5px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; margin-bottom: 4px; }
+        .btn-eliminar-venta { background-color: #e74c3c; color: white; border: none; padding: 5px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; }
         .btn-detalle { background-color: #2980b9; color: white; border: none; padding: 6px 10px; font-size: 0.85rem; border-radius: 4px; cursor: pointer; }
 
         #modal-detalle { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
@@ -69,6 +73,7 @@
             </tbody>
         </table>
         <button class="btn-exportar" onclick="exportarHistorialCSV()">⬇️ Exportar historial a CSV</button>
+        <button class="btn-peligro" onclick="borrarTodoElHistorial()">🗑️ Borrar TODO el historial</button>
     </div>
 
     <!-- COMANDAS DE UN DÍA ESPECÍFICO -->
@@ -87,10 +92,11 @@
                     <th>Origen</th>
                     <th>Total</th>
                     <th>Detalle</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="tabla-comandas">
-                <tr><td colspan="6">Elige una fecha y presiona "Ver comandas".</td></tr>
+                <tr><td colspan="7">Elige una fecha y presiona "Ver comandas".</td></tr>
             </tbody>
         </table>
         <button class="btn-exportar" onclick="exportarComandasCSV()">⬇️ Exportar comandas a CSV</button>
@@ -106,8 +112,83 @@
 
     <script>
         const API_BASE = 'https://backend-la-escondida.onrender.com/api/reportes/ventas';
+        const API_URL = 'https://backend-la-escondida.onrender.com/api';
         let historialCache = [];
         let comandasCache = [];
+
+        // Estas acciones son delicadas (dinero/inventario) y esta pantalla no tiene login,
+        // así que pedimos la contraseña de admin en el momento de usarlas.
+        function pedirPasswordAdmin() {
+            const password = prompt("Contraseña de administrador para continuar:");
+            if (!password) return null;
+            return { 'Content-Type': 'application/json', 'x-admin-password': password };
+        }
+
+        async function cancelarVenta(id_orden, numero_dia) {
+            if (!confirm(`¿Cancelar la venta #${numero_dia}? Dejará de contar en el total del día y se regresará el insumo al inventario.`)) return;
+
+            const headers = pedirPasswordAdmin();
+            if (!headers) return;
+
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id_orden}/cancelar-venta`, { method: 'PUT', headers });
+                const resultado = await res.json();
+
+                if (res.ok) {
+                    alert(resultado.mensaje);
+                    cargarComandasDelDia();
+                } else {
+                    alert(`Error: ${resultado.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            }
+        }
+
+        async function eliminarVenta(id_orden, numero_dia) {
+            if (!confirm(`¿Eliminar la venta #${numero_dia} del historial? Esto es permanente y NO se puede deshacer. El inventario no se toca (el insumo ya se consumió).`)) return;
+
+            const headers = pedirPasswordAdmin();
+            if (!headers) return;
+
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id_orden}`, { method: 'DELETE', headers });
+                const resultado = await res.json();
+
+                if (res.ok) {
+                    alert(resultado.mensaje);
+                    cargarComandasDelDia();
+                    cargarReporte();
+                } else {
+                    alert(`Error: ${resultado.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            }
+        }
+
+        async function borrarTodoElHistorial() {
+            if (!confirm("¿Borrar TODO el historial de ventas? Esto es permanente y NO se puede deshacer.")) return;
+            if (!confirm("De verdad, ¿estás seguro? Se perderán todas las ventas registradas para siempre.")) return;
+
+            const headers = pedirPasswordAdmin();
+            if (!headers) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/historial`, { method: 'DELETE', headers });
+                const resultado = await res.json();
+
+                if (res.ok) {
+                    alert(resultado.mensaje);
+                    cargarReporte();
+                    document.getElementById('tabla-comandas').innerHTML = '<tr><td colspan="7">Elige una fecha y presiona "Ver comandas".</td></tr>';
+                } else {
+                    alert(`Error: ${resultado.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            }
+        }
 
         // Corte de turno fijo a las 17:00. "hora" viene como texto "HH:MM" (zero-padded),
         // así que comparar como string funciona igual que comparar como hora.
@@ -169,7 +250,7 @@
                 return;
             }
 
-            tbody.innerHTML = '<tr><td colspan="6">Buscando comandas...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7">Buscando comandas...</td></tr>';
 
             try {
                 const respuesta = await fetch(`${API_BASE}/comandas?fecha=${fecha}`);
@@ -177,7 +258,7 @@
                 comandasCache = Array.isArray(comandas) ? comandas : [];
 
                 if (comandasCache.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">No hay comandas cobradas en esa fecha.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7">No hay comandas cobradas en esa fecha.</td></tr>';
                     return;
                 }
 
@@ -195,12 +276,16 @@
                         <td>${origen}</td>
                         <td><strong>$${parseFloat(c.total).toFixed(2)}</strong></td>
                         <td><button class="btn-detalle" onclick="verDetalleOrden(${c.id_orden})">👁️ Ver</button></td>
+                        <td>
+                            <button class="btn-cancelar-venta" onclick="cancelarVenta(${c.id_orden}, ${c.numero_dia})">↩️ Cancelar</button><br>
+                            <button class="btn-eliminar-venta" onclick="eliminarVenta(${c.id_orden}, ${c.numero_dia})">🗑️ Eliminar</button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } catch (error) {
                 console.error("Error al obtener comandas del día:", error);
-                tbody.innerHTML = '<tr><td colspan="6">Error al conectar con el servidor.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7">Error al conectar con el servidor.</td></tr>';
             }
         }
 
