@@ -124,6 +124,33 @@
             return { 'Content-Type': 'application/json', 'x-admin-password': password };
         }
 
+        async function cancelarProductoDeVenta(id_orden, id_producto, nota) {
+            if (!confirm("¿Cancelar solo este producto de la venta? Se resta del total y se regresa su insumo al inventario.")) return;
+
+            const headers = pedirPasswordAdmin();
+            if (!headers) return;
+
+            try {
+                const res = await fetch(`${API_URL}/ordenes/${id_orden}/productos/${id_producto}/cancelar`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ nota: nota || null })
+                });
+                const resultado = await res.json();
+
+                if (res.ok) {
+                    alert(resultado.mensaje);
+                    verDetalleOrden(id_orden); // Refrescamos el modal con el producto ya quitado
+                    cargarComandasDelDia();
+                    cargarReporte();
+                } else {
+                    alert(`Error: ${resultado.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión.");
+            }
+        }
+
         async function cancelarVenta(id_orden, numero_dia) {
             if (!confirm(`¿Cancelar la venta #${numero_dia}? Dejará de contar en el total del día y se regresará el insumo al inventario.`)) return;
 
@@ -308,10 +335,16 @@
 
                 document.getElementById('modal-titulo').innerText = `Orden #${datos.orden.numero_dia}`;
 
+                const esPagada = datos.orden.estado === 'Pagada';
+
                 let filas = '';
                 datos.items.forEach(item => {
                     const subtotal = (item.cantidad * item.precio_unitario).toFixed(2);
-                    filas += `<tr><td>${item.cantidad}x ${item.nombre}${item.nota ? ` <em>(${item.nota})</em>` : ''}</td><td style="text-align:right;">$${subtotal}</td></tr>`;
+                    const notaEscapada = (item.nota || '').replace(/'/g, "\\'");
+                    const botonCancelar = esPagada
+                        ? `<button class="btn-eliminar-venta" style="margin-left:6px;" onclick="cancelarProductoDeVenta(${id_orden}, ${item.id_producto}, '${notaEscapada}')">🗑️</button>`
+                        : '';
+                    filas += `<tr><td>${item.cantidad}x ${item.nombre}${item.nota ? ` <em>(${item.nota})</em>` : ''}</td><td style="text-align:right;">$${subtotal}${botonCancelar}</td></tr>`;
                 });
 
                 contenido.innerHTML = `
