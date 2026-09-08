@@ -64,8 +64,8 @@
                     <th>Fecha (Año-Mes-Día)</th>
                     <th>Órdenes Cobradas</th>
                     <th>Total Vendido</th>
-                    <th>Mañana (Rubí)</th>
-                    <th>Tarde (Juan Diego)</th>
+                    <th>Matutino</th>
+                    <th>Vespertino</th>
                 </tr>
             </thead>
             <tbody id="tabla-historial">
@@ -222,7 +222,7 @@
         const HORA_CORTE_TURNO = '17:00';
 
         function calcularTurno(hora) {
-            return hora < HORA_CORTE_TURNO ? 'Mañana (Rubí)' : 'Tarde (Juan Diego)';
+            return hora < HORA_CORTE_TURNO ? 'Matutino' : 'Vespertino';
         }
 
         async function cargarReporte() {
@@ -386,8 +386,8 @@
             ]);
             descargarCSV('historial_ventas.csv', [
                 'Fecha', 'Ordenes Cobradas', 'Total Vendido',
-                'Ordenes Manana (Matutino)', 'Vendido Manana (Matutino)',
-                'Ordenes Tarde (Vespertino)', 'Vendido Tarde (Vespertino)'
+                'Ordenes Matutino', 'Vendido Matutino',
+                'Ordenes Vespertino', 'Vendido Vespertino'
             ], filas);
         }
 
