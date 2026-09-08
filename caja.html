@@ -22,6 +22,9 @@
         .info-cliente { background-color: #eaf2f8; color: #2c3e50; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.95rem; }
         .btn-imprimir { background-color: #7f8c8d; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
         .btn-imprimir:hover { background-color: #6c7a7a; }
+        .btn-descuento { background-color: #8e44ad; color: white; border: none; padding: 10px; width: 100%; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 8px; }
+        .btn-descuento:hover { background-color: #7d3c98; }
+        .info-descuento { background-color: #f4ecf7; color: #6c3483; font-weight: bold; padding: 8px; border-radius: 4px; margin: 5px 0 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -34,6 +37,51 @@
     <script>
         // BANDERA STRICTA ANTI-DOBLE PROCESAMIENTO
         let procesandoPago = false;
+
+        // Esta pantalla no tiene login, así que pedimos la contraseña de admin al momento de descontar.
+        function pedirPasswordAdmin() {
+            const password = prompt("Contraseña de administrador para continuar:");
+            if (!password) return null;
+            return { 'Content-Type': 'application/json', 'x-admin-password': password };
+        }
+
+        async function aplicarDescuento(id_orden) {
+            const montoTexto = prompt("¿Cuánto de descuento (en pesos)?");
+            if (!montoTexto) return;
+
+            const monto = parseFloat(montoTexto);
+            if (isNaN(monto) || monto <= 0) {
+                alert("Ingresa un monto válido mayor a 0.");
+                return;
+            }
+
+            const motivo = prompt("¿Por qué se aplica este descuento?");
+            if (!motivo || !motivo.trim()) {
+                alert("El motivo es obligatorio.");
+                return;
+            }
+
+            const headers = pedirPasswordAdmin();
+            if (!headers) return;
+
+            try {
+                const res = await fetch(`https://backend-la-escondida.onrender.com/api/ordenes/${id_orden}/descuento`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ monto, motivo: motivo.trim() })
+                });
+                const resultado = await res.json();
+
+                if (res.ok) {
+                    alert(resultado.mensaje);
+                    cargarOrdenesCaja();
+                } else {
+                    alert(`Error: ${resultado.error}`);
+                }
+            } catch (error) {
+                alert("Error de conexión al aplicar el descuento.");
+            }
+        }
 
         async function cargarOrdenesCaja() {
             try {
@@ -71,12 +119,19 @@
                         `;
                     } else {
                         ticket.className = 'ticket';
+                        const htmlDescuento = orden.descuento > 0
+                            ? `<div class="info-descuento">💲 Descuento aplicado: -$${parseFloat(orden.descuento).toFixed(2)} (${orden.motivo_descuento || 'sin motivo'})</div>`
+                            : '';
                         ticket.innerHTML = `
                             <h2>Orden #${orden.numero_dia} - ${origen}</h2>
                             ${htmlInfoCliente}
+                            ${htmlDescuento}
                             <div class="total">Total: $${orden.total}</div>
                             <button class="btn-cobrar" id="btn-${orden.id_orden}" onclick="cobrarOrden(event, ${orden.id_orden}, ${orden.total})">
                                 💵 Cobrar
+                            </button>
+                            <button class="btn-descuento" onclick="aplicarDescuento(${orden.id_orden})">
+                                💲 Aplicar descuento
                             </button>
                             <button class="btn-imprimir" onclick="imprimirTicket(${orden.id_orden})">
                                 🖨️ Imprimir ticket
@@ -189,6 +244,15 @@
                         <tr>
                             <td>Costo de envío</td>
                             <td class="precio-item">$20.00</td>
+                        </tr>
+                    `;
+                }
+
+                if (orden.descuento > 0) {
+                    filasItems += `
+                        <tr>
+                            <td>Descuento (${orden.motivo_descuento || 'sin motivo'})</td>
+                            <td class="precio-item">-$${parseFloat(orden.descuento).toFixed(2)}</td>
                         </tr>
                     `;
                 }
